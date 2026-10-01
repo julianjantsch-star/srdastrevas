@@ -1,12 +1,11 @@
 ; =====================================================================
-;  O V N I   -   MSX2+
-;  Recriacao do OVNI (Philips Odyssey, 1982) / UFO! (Odyssey2, Ed Averett)
+;  S E N H O R   D A S   T R E V A S   -   MSX2+
+;  Recriacao do Senhor das Trevas! (Philips Odyssey, 1983) / Attack of
+;  the Timelord! (Magnavox Odyssey2, 1982, Ed Averett)
 ;  SCREEN 5 (G4 - 256x212, 16 cores), cartucho ROM de 32KB
 ;
-;  A fonte e a paleta foram extraidas da tela real do console rodando no
-;  emulador do Odyssey Vault; a mecanica segue o original: anel de 15
-;  pontos que e escudo e municao ao mesmo tempo, mira que gira so no
-;  sentido horario, e tres classes de inimigo valendo 1, 3 e 10 pontos.
+;  Abertura, fonte, paleta, motor de som, teclado e calibragem vem do
+;  OVNI 4.6 (mesmo console, mesmo chip). O jogo esta em jogo.asm.
 ; =====================================================================
 
 VDPDATA equ 0x98
@@ -749,29 +748,8 @@ SelColors:
 ; =====================================================================
 CELL_W     equ 14              ; celula de teste da calibragem do VDP (igual a do OVNI: mesma escala)
 CELL_H     equ 12
-ST_ROSTO   equ 0
-ST_FENDA   equ 1
-ST_COMBATE equ 2
-ST_LIMPO   equ 3
-ST_MORTE   equ 4
 
-PlayGame:
-        call ClearScreen
-        ld a,C_WHITE
-        ld b,C_BLACK
-        call SetCols
-        ld hl,TXT_OPT2
-        ld c,92
-        call PrintCenter
-        ld hl,TXT_OPT3
-        ld c,110
-        call PrintCenter
-PG_L:   call WaitFrame
-        call ScanKeys
-        call AnyEdge
-        jr z,PG_L
-        call SndAllOff
-        ret
+#include "jogo.asm"
 
 ; =====================================================================
 ;  SONS  -  todos medidos na gravacao do original (FFT + autocorrelacao)
@@ -1657,6 +1635,7 @@ TXT_FIM:     db "FIM DE JOGO",0
 TXT_TECLA:   db "APERTE ESPACO",0
 
 #include "font.inc"
+#include "sprites.inc"
 
 
 ; =====================================================================
@@ -1888,4 +1867,30 @@ msQuiet:   ds 1               ; quadros seguidos sem projetil vivo (ate 3)
 ptQuiet:   ds 1               ; idem particulas
 msN:       ds 1
 ptN:       ds 1
+; ---- Senhor das Trevas ----
+nivel:     ds 1
+faceOff:   ds 1               ; 0 apertado no rosto: sem rosto ate o fim da partida
+faceT:     ds 1
+upSrc:     ds 2
+upI:       ds 1
+plX:       ds 1
+plV:       ds 1               ; -2, 0, +2: o nucleonico mira com isso
+lzAct:     ds 1
+lzX:       ds 1
+lzY:       ds 1
+morreu:    ds 1
+shipAcc:   ds 1
+shipRate:  ds 1
+shipFig:   ds 1
+wAcc:      ds 1
+wRate:     ds 1
+vPasso:    ds 1
+spDist:    ds 1
+toSpawn:   ds 1
+dropT:     ds 1
+dropReload: ds 1
+maxType:   ds 1
+shTab:     ds MAXSHIP*8       ; shTab, wpTab e bmTab juntas: zeradas de uma vez
+wpTab:     ds MAXWPN*8
+bmTab:     ds MAXBOOM*8
 RAM_FIM:

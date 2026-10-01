@@ -66,6 +66,14 @@ Fonte novo e **limpo** (um `src/` montado direto, sem a pilha de `fixNN.cjs`).
 | 6 | Modo moderno | 5 |
 | 7 | ROM 1.0 para teste no MSX real | 5 |
 
+### Andamento (01/10/2026)
+
+| # | Situação |
+|---|---|
+| 4 | **feito**: boot → ON → SELECT GAME → jogo |
+| 5 | **jogável com valores provisórios** (manual/resenhas): rosto que fala (0 desliga), fenda que solta a fila, fila serpenteando, canhão com um tiro por vez, as 4 armas liberadas por nível (todas do 4º em diante), pontos 5/2/4/8/16, 3 vidas (o nível recomeça), 256 níveis, fim de jogo com recorde e nome. Tudo o que é chute está marcado `PROVISORIO` em `src/jogo.asm`, esperando as gravações |
+| 6 | modo 1 ainda roda o mesmo jogo do modo 0 |
+
 ### Gravações que preciso (como as do OVNI)
 
 | # | O quê |

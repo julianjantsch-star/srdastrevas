@@ -1,10 +1,12 @@
 {
-  "name": "msxbuild",
+  "name": "senhor-das-trevas-msx",
   "version": "1.0.0",
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "sprites": "node tools/gensprites.cjs",
+    "build": "node tools/gensprites.cjs && ALVO=trevas node tools/build.mjs",
+    "test": "npm run build && node tools/testa-jogo.cjs"
   },
   "keywords": [],
   "author": "",
