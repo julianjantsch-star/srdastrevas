@@ -179,7 +179,7 @@ PalData:
         db 0x23,0x05    ;  3 verde
         db 0x53,0x05    ;  4 amarelo
         db 0x37,0x04    ;  5 azul
-        db 0x66,0x04    ;  6 magenta
+        db 0x55,0x01    ;  6 magenta escuro (a grade do placar no Senhor das Trevas)
         db 0x36,0x06    ;  7 ciano
         db 0x44,0x04    ;  8 cinza
         db 0x73,0x03    ;  9 vermelho claro
@@ -1635,7 +1635,9 @@ TXT_FIM:     db "FIM DE JOGO",0
 TXT_TECLA:   db "APERTE ESPACO",0
 
 #include "font.inc"
-#include "sprites.inc"
+#include "o2.asm"
+#include "o2dados.inc"
+#include "o2m.asm"
 
 
 ; =====================================================================
@@ -1869,28 +1871,75 @@ msN:       ds 1
 ptN:       ds 1
 ; ---- Senhor das Trevas ----
 nivel:     ds 1
-faceOff:   ds 1               ; 0 apertado no rosto: sem rosto ate o fim da partida
-faceT:     ds 1
-upSrc:     ds 2
-upI:       ds 1
+abF:       ds 2
+abPtr:     ds 2
+raioOn:    ds 1
+raK:       ds 1
+raBase:    ds 1
+hudTxt:    ds 32              ; 16 glifos + 16 cores
+hudSujo:   ds 1
+hudRedo:   ds 1
+hudX:      ds 1
+; tabela virtual do i8244 (o2.asm): 12 caracteres, a figura ampliada, 4 figuras
+vCh:       ds 48
+vZ:        ds 4
+vSp:       ds 16
+vDrawn:    ds 13*6
+vSpCor:    ds 4
+o2f:       ds 1
+o2c:       ds 1
+odX:       ds 1
+odY:       ds 1
+odW:       ds 1
+odH:       ds 1
+odK:       ds 1
+odSX:      ds 2
+odSY:      ds 2
+mkCor:     ds 1
+mkRows:    ds 1
+mkRep:     ds 1
+mkN:       ds 1
+mkK:       ds 1
+mkBits:    ds 2
+mkX:       ds 2
+mkYv:      ds 2
+mkHi:      ds 1
+; estado do jogo (zerado a cada rodada, de jgIni a jgFim)
+jgIni:
 plX:       ds 1
-plV:       ds 1               ; -2, 0, +2: o nucleonico mira com isso
-lzAct:     ds 1
+plT:       ds 1
+plDir:     ds 1
+plAnda:    ds 1
+plVivo:    ds 1
+lzVoa:     ds 1
 lzX:       ds 1
 lzY:       ds 1
-morreu:    ds 1
-shipAcc:   ds 1
-shipRate:  ds 1
-shipFig:   ds 1
-wAcc:      ds 1
-wRate:     ds 1
-vPasso:    ds 1
-spDist:    ds 1
-toSpawn:   ds 1
-dropT:     ds 1
-dropReload: ds 1
-maxType:   ds 1
-shTab:     ds MAXSHIP*8       ; shTab, wpTab e bmTab juntas: zeradas de uma vez
-wpTab:     ds MAXWPN*8
-bmTab:     ds MAXBOOM*8
+lzCor:     ds 1
+esT:       ds 1
+esX:       ds 1
+esY:       ds 1
+ptsAdd:    ds 1
+ptsT:      ds 1
+filaN:     ds 1
+filaNasc:  ds 1
+filaSaiu:  ds 1
+congela:   ds 1
+shX:       ds 1
+shY:       ds 1
+shDir:     ds 1
+shDirVelha: ds 1
+shTenta:   ds 1
+shAnda:    ds 1
+shCurva:   ds 1
+shFase:    ds 1
+shRapT:    ds 2
+shVivo:    ds 8
+rastroN:   ds 2
+rastro:    ds 256
+wpT:       ds 1
+wpAlvo:    ds 1
+wpTab:     ds 3*8
+moT:       ds 1
+fimT:      ds 1
+jgFim:
 RAM_FIM:

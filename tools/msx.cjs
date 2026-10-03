@@ -362,16 +362,39 @@ class MSX {
     this.key(name, true); this.runFrames(holdFrames);
     this.key(name, false); this.runFrames(gapFrames);
   }
+  // sprites modo 2 (G4/G7) desenhados por cima, para conferir as fotos
+  spriteLayer() {
+    const v = this.vdp, R = v.regs, out = new Int16Array(256 * 212).fill(-1);
+    if (R[8] & 0x02) return out;                       // sprites desligados
+    const sat = (((R[11] & 3) << 15) | (R[5] << 7)) & 0x1fe00;
+    const col = sat - 0x200, pat = (R[6] & 0x3f) << 11;
+    const big = R[1] & 2, mag = R[1] & 1, sz = big ? 16 : 8, z = mag ? 2 : 1;
+    for (let i = 0; i < 32; i++) {
+      const y0 = v.vram[sat + i * 4]; if (y0 === 216) break;
+      const x0 = v.vram[sat + i * 4 + 1]; let pn = v.vram[sat + i * 4 + 2]; if (big) pn &= 0xfc;
+      for (let r = 0; r < sz * z; r++) {
+        const yy = (y0 + 1 + r) & 255; if (yy >= 212) continue;
+        const pr = Math.floor(r / z), c = v.vram[col + i * 16 + pr] & 15;
+        for (let k = 0; k < sz * z; k++) {
+          const pc = Math.floor(k / z), b = pat + pn * 8 + (pc >= 8 ? 16 : 0) + pr;
+          if (v.vram[b] & (0x80 >> (pc & 7))) { const xx = x0 + k; if (xx < 256 && out[yy * 256 + xx] < 0) out[yy * 256 + xx] = c; }
+        }
+      }
+    }
+    return out;
+  }
   screenshot(path, scaleY, scaleX) {
     scaleY = scaleY === undefined ? 2 : scaleY;
     scaleX = scaleX === undefined ? ((this.vdp.isG4() || this.vdp.isG7()) ? 2 : 1) : scaleX;
     const v = this.vdp, base = v.displayBase();
     const W = v.scrW(), H = 212;
     const rows = [];
+    const spr = this.spriteLayer();
     for (let y = 0; y < H; y++) {
       const line = Buffer.alloc(W * scaleX * 3);
       for (let x = 0; x < W; x++) {
-        const rgb = v.pixelRGB(x, y, base);
+        const sc = spr[y * 256 + x];
+        const rgb = sc >= 0 && W === 256 && !v.isG7() ? v.rgb(sc) : v.pixelRGB(x, y, base);
         for (let k = 0; k < scaleX; k++) {
           const o = (x * scaleX + k) * 3;
           line[o] = rgb[0]; line[o + 1] = rgb[1]; line[o + 2] = rgb[2];
