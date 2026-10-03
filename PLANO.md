@@ -66,13 +66,17 @@ Fonte novo e **limpo** (um `src/` montado direto, sem a pilha de `fixNN.cjs`).
 | 6 | Modo moderno | 5 |
 | 7 | ROM 1.0 para teste no MSX real | 5 |
 
-### Andamento (01/10/2026)
+### Andamento (03/10/2026)
 
 | # | Situação |
 |---|---|
-| 4 | **feito**: boot → ON → SELECT GAME → jogo |
-| 5 | **jogável com valores provisórios** (manual/resenhas): rosto que fala (0 desliga), fenda que solta a fila, fila serpenteando, canhão com um tiro por vez, as 4 armas liberadas por nível (todas do 4º em diante), pontos 5/2/4/8/16, 3 vidas (o nível recomeça), 256 níveis, fim de jogo com recorde e nome. Tudo o que é chute está marcado `PROVISORIO` em `src/jogo.asm`, esperando as gravações |
-| 6 | modo 1 ainda roda o mesmo jogo do modo 0 |
+| 1–3 | **feito sem gravação**: o cartucho original (o mesmo do Odyssey Vault) roda no MAME 0.264 dirigido por Lua; cada escrita no i8244 é registrada quadro a quadro (`ref/mame/`, `ref/MEDIDAS.md`) |
+| 4 | feito |
+| 5 | **modo 0 refeito pelas medidas**: abertura, fila, canhão, laser, armas por nível, estouro, morte (uma vida), recorde, nome digitado a qualquer momento, sons convertidos do chip |
+| 6 | **modo 1 em SCREEN 8**: mesma lógica, desenho novo |
+| 7 | ROM para teste no MSX real: `out/TREVAS.ROM` |
+
+Ainda sem medida direta (o robô não passou do nível 3): o nível 4 em diante, o matador nucleônico (forma tirada da tabela do cartucho, movimento pelo manual).
 
 ### Gravações que preciso (como as do OVNI)
 

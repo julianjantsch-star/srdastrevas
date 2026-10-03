@@ -54,3 +54,14 @@ Cores de objeto (3 bits): `0` cinza escuro, `1` vermelho, `2` verde, `3` amarelo
 ## Som (registradores 0xA7–0xAA)
 
 0xAA: bit 7 liga, bit 5 relógio rápido (a cada 4 linhas = 3933 Hz; senão a cada 16 = 983 Hz), bit 4 ruído (realimentação bit 0 ⊕ bit 5 no bit 15), bits 0–3 volume (largura de pulso, linear). 0xA7–0xA9: o padrão de 24 bits que gira.
+
+## Mais medidas (03/10)
+
+* **Armas por nível**: nível 1 só mísseis; nível 2 sobretudo minas (87 de 103); nível 3 entram os aniquiladores (4 formas, verde/amarelo: caem 1/quadro e, no chão, rolam ½/quadro para o canhão). O matador nucleônico (losango, 2 formas) está na tabela de formas do cartucho (0xDEA, 0xDF2), mas o robô não chegou ao nível 4 para vê-lo voar.
+* **Estouro de nave**: a figura 0 (o laser) fica onde acertou e passa por ponto, ponto maior, anel, anel grande, com a cor subindo — 31 quadros. Os 5 pontos entram +2 e, 4 quadros depois, +3.
+* **Fim de nível**: depois da última nave o canhão continua livre ~116 quadros; tudo some, 4 quadros, nova abertura.
+* **Morte**: as naves congelam; figura 0 no canhão e figura 1 ampliada (169, x do canhão) passam pelos mesmos pontos e anéis por 62 quadros; tela vazia; partida nova com o recorde atualizado. **Uma vida só.**
+* **Nome do recorde**: cada letra digitada (a qualquer momento) ocupa a próxima posição do `??????`.
+* **Caminho da fila**: sorteado — quatro rodadas gravadas saem do mesmo ponto (78, 98) e vão para lados diferentes.
+* **Caixa do placar**: barras horizontais nas linhas 192–194 e 216–218, verticais de 2 unidades nas pontas (x 8 e 152 do chip).
+* **Sons**: tiro = ruído rápido, 1967 Hz ×2, ruído, zumbido de 164 Hz ×4; estouro = (ruído, 164 Hz, 41 Hz subindo) ×3, 31 quadros; marcha de fundo = ciclo de 36 quadros de 41 Hz; arma solta = 164/328 Hz + ruído; abertura = ruídos lentos (983 Hz) com as sementes do chip. Todos convertidos automaticamente (`tools/gen_o2.cjs`).

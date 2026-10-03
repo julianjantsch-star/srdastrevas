@@ -394,7 +394,7 @@ class MSX {
       const line = Buffer.alloc(W * scaleX * 3);
       for (let x = 0; x < W; x++) {
         const sc = spr[y * 256 + x];
-        const rgb = sc >= 0 && W === 256 && !v.isG7() ? v.rgb(sc) : v.pixelRGB(x, y, base);
+        const rgb = sc >= 0 && W === 256 ? (v.isG7() ? G7SPR[sc] : v.rgb(sc)) : v.pixelRGB(x, y, base);
         for (let k = 0; k < scaleX; k++) {
           const o = (x * scaleX + k) * 3;
           line[o] = rgb[0]; line[o + 1] = rgb[1]; line[o + 2] = rgb[2];
@@ -406,6 +406,8 @@ class MSX {
   }
 }
 
+// cores fixas dos sprites no SCREEN 8 (GRB de 3 bits, como o openMSX)
+const G7SPR = [0x000,0x002,0x030,0x032,0x300,0x302,0x330,0x332,0x472,0x007,0x070,0x077,0x700,0x707,0x770,0x777].map(v => [((v >> 4) & 7) * 255 / 7, ((v >> 8) & 7) * 255 / 7, (v & 7) * 255 / 7].map(Math.round));
 function writePNG(path, w, h, rows) {
   const raw = Buffer.alloc(rows.length * (w * 3 + 1));
   let o = 0;

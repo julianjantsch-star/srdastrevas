@@ -1882,6 +1882,11 @@ hudSujo:   ds 1
 hudRedo:   ds 1
 hudDr:     ds 16
 o2Etapa:   ds 1
+estX:      ds 48*3            ; modo 1: estrelas (x, y, fase)
+estI:      ds 1
+zFig8:     ds 1
+zCor8:     ds 1
+zSrc8:     ds 2
 hudX:      ds 1
 ; tabela virtual do i8244 (o2.asm): 12 caracteres, a figura ampliada, 4 figuras
 vCh:       ds 48

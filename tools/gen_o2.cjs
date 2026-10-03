@@ -176,5 +176,49 @@ const S = M.som;
 out += som("SND_INICIO", S.inicio) + som("SND_ABERTURA", S.abertura) + som("SND_PRONTO", S.pronto) +
   som("SND_MARCHA", S.marcha, true) + som("SND_TIRO", S.tiro) + som("SND_ESTOURO", S.estouro) +
   som("SND_ARMA", S.arma) + som("SND_MORTE", S.morte);
+
+// ------------------------------------------------------------------ modo 1 (SCREEN 8)
+// rampa de 5 tons (0 = preto, 1 escuro .. 4 brilho) para cada cor do chip, em
+// GGGRRRBB, a partir da paleta do i8244 no MAME
+const O2RGB = [[0x49,0x49,0x49],[0xff,0x49,0x49],[0x49,0xff,0x49],[0xff,0xff,0x49],[0x49,0x49,0xff],[0xff,0x49,0xff],[0x49,0xff,0xff],[0xff,0xff,0xff]];
+const g7 = ([r, g, b]) => (Math.round(Math.min(255, g) / 255 * 7) << 5) | (Math.round(Math.min(255, r) / 255 * 7) << 2) | Math.round(Math.min(255, b) / 255 * 3);
+const mix = (a, b, t) => a.map((v, i) => v + (b[i] - v) * t);
+const ramp = [];
+for (const c of O2RGB) ramp.push(0, g7(c.map(v => v * 0.42)), g7(c.map(v => v * 0.68)), g7(c), g7(mix(c, [255, 255, 255], 0.45)));
+out += `\n; modo 1: rampa de 5 tons por cor do chip (GGGRRRBB)\nRAMP8:\n  db ${db(ramp)}\n`;
+// a grade do placar e as estrelas
+out += `GRADE8: db ${db([g7([0x50,0x10,0x60]), g7([0x90,0x30,0xa8]), g7([0xd0,0x70,0xe0]), g7([0x90,0x30,0xa8])])}\n`;
+out += `ESTRELA8: db ${db([0, g7([0x20,0x20,0x50]), g7([0x40,0x40,0x90]), g7([0x80,0x80,0xd0]), g7([0xd0,0xd0,0xff]), g7([0xff,0xff,0xff]), g7([0xd0,0xd0,0xff]), g7([0x80,0x80,0xd0])])}\n`;
+// desenhos novos (tons 0..4): a nave e o canhao
+const NAVE8 = [
+  "....3443....",
+  "...344443...",
+  ".2333333332.",
+  "234343434342",
+  ".1222222221.",
+  "...1....1...",
+];
+const CANHAO8 = [
+  "...........44...........",
+  "..........4444..........",
+  ".........434434.........",
+  "........33433433........",
+  ".......3334334333.......",
+  "......332243342233......",
+  ".....33322433422333.....",
+  "....3332224334222333....",
+  "...333222243342222333...",
+  "..22222222433422222222..",
+  ".2222222224334222222222.",
+  "222222222243342222222222",
+  "111111111111111111111111",
+  ".1.1.1.1.1.1.1.1.1.1.1.1",
+];
+const lv = rows => rows.map(r => [...r].map(ch => ch === "." ? 0 : +ch)).flat();
+out += `NAVE8_W equ 12\nNAVE8_H equ 6\nNAVE8:\n  db ${db(lv(NAVE8))}\n`;
+out += `CANHAO8_W equ 24\nCANHAO8_H equ 14\nCANHAO8:\n`;
+const cv = lv(CANHAO8); for (let i = 0; i < cv.length; i += 24) out += `  db ${db(cv.slice(i, i + 24))}\n`;
+// cor dos sprites no SCREEN 8 (paleta fixa de 16): clara e escura de cada cor do chip
+out += `SPC8: db 7,10,12,14,9,11,13,15\nSPC8E: db 7,2,4,6,1,3,5,7\n`;
 fs.writeFileSync(path.join(ROOT, "src", "o2dados.inc"), out);
 console.log("o2dados.inc:", out.length, "bytes de texto");
