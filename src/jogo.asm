@@ -86,6 +86,11 @@ DS_H:   ld a,(hudRedo)
         ret z
         xor a
         ld (hudRedo),a
+        ld hl,hudDr
+        ld b,16
+DS_Z:   ld (hl),0xFF
+        inc hl
+        djnz DS_Z
         call Caixa
         jp DesenhaPlacar
 
@@ -128,6 +133,15 @@ ZeraJogo:
 Quadro:
         ; o nome do recorde e digitado a qualquer momento (como no original:
         ; cada letra ocupa a proxima das 6 posicoes)
+        ld hl,keyEdge+2        ; so procura a letra se alguma linha de letras mudou
+        ld a,(hl)
+        inc hl
+        or (hl)
+        inc hl
+        or (hl)
+        inc hl
+        or (hl)
+        jr z,QD_0
         call GetLetter
         or a
         jr z,QD_0
@@ -616,12 +630,10 @@ PN_L:   ld a,(iy+0)
         ld a,b
         ld e,a
         ld d,0
-        ld hl,0
-        ld c,SH_GAP
-PN_M:   add hl,de
-        dec c
-        jr nz,PN_M             ; HL = GAP * i
-        ex de,hl
+        ld hl,GAP_TAB
+        add hl,de
+        ld e,(hl)              ; GAP * i
+        ld d,0
         ld hl,(rastroN)
         or a
         sbc hl,de
@@ -654,6 +666,8 @@ PN_N:   ld de,4
         cp NSHIP
         jr c,PN_L
         ret
+
+GAP_TAB: db 0, SH_GAP, SH_GAP*2, SH_GAP*3, SH_GAP*4, SH_GAP*5, SH_GAP*6, SH_GAP*7
 
 ; ---------------------------------------------------------------------
 ;  O CANHAO: so anda na horizontal; acelera segurando (1/quadro nos 8

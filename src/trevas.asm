@@ -623,6 +623,7 @@ ScreenOn:
         call PrintCenter
 SO_W:
         call WaitFrame
+        call O2Passo            ; monta as figuras do jogo enquanto espera a tecla
         call ScanKeys
         call AnyEdge
         jr z,SO_W
@@ -1879,6 +1880,8 @@ raBase:    ds 1
 hudTxt:    ds 32              ; 16 glifos + 16 cores
 hudSujo:   ds 1
 hudRedo:   ds 1
+hudDr:     ds 16
+o2Etapa:   ds 1
 hudX:      ds 1
 ; tabela virtual do i8244 (o2.asm): 12 caracteres, a figura ampliada, 4 figuras
 vCh:       ds 48

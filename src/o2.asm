@@ -39,7 +39,37 @@ OC_0:   inc a
 
 ; ---------------------------------------------------------------------
 ; liga o modo 0: SCREEN 5 com sprites 16x16, monta as celulas e os padroes
+; monta as celulas e os padroes (uma vez: na tela ON, enquanto espera a tecla)
+O2Prepara:
+        call O2Passo
+        ld a,(o2Etapa)
+        cp O2_ETAPAS
+        jr c,O2Prepara
+        ret
+
+; uma etapa por chamada (a tela ON chama uma por quadro): 0 = padroes dos
+; sprites; depois cada figura de caractere, cada ampliada e cada glifo do
+; placar, em todas as cores
+O2_ETAPAS equ 1+CF_N+ZF_N+HUD_NG
+O2Passo:
+        ld a,(o2Etapa)
+        cp O2_ETAPAS
+        ret nc
+        inc a
+        ld (o2Etapa),a
+        dec a
+        jp z,O2Padroes
+        dec a
+        cp CF_N
+        jp c,O2CelCar
+        sub CF_N
+        cp ZF_N
+        jp c,O2CelZoom
+        sub ZF_N
+        jp O2CelHud
+
 O2Init:
+        call O2Prepara
         call ClearScreen
         di
         ld a,0x42              ; R1: tela ligada, sprites 16x16
@@ -63,7 +93,26 @@ O2Init:
         ld a,8|0x80
         out (VDPCTRL),a
         ei
-        ; padroes dos sprites
+        ; tabela virtual vazia, nada desenhado
+        call O2Clear
+        ld hl,vDrawn
+        ld de,vDrawn+1
+        ld bc,VSLOTS*6-1
+        ld (hl),NO
+        ldir
+        ld a,0xFF
+        ld (vSpCor),a
+        ld (vSpCor+1),a
+        ld (vSpCor+2),a
+        ld (vSpCor+3),a
+        ld hl,hudDr
+        ld b,16
+OI_HZ:  ld (hl),0xFF
+        inc hl
+        djnz OI_HZ
+        jp O2Sprites
+
+O2Padroes:
         ld hl,SPP_ADDR
         call SetWr
         ld hl,SPR_PAT
@@ -75,10 +124,12 @@ OI_P:   ld a,(hl)
         ld a,b
         or c
         jr nz,OI_P
-        ; celulas dos caracteres: figura f, cor c em (128*(f&1) + 16c, 256 + 16*(f>>1))
-        xor a
+        ret
+
+; A = figura de caractere: as 8 cores dela
+O2CelCar:
         ld (o2f),a
-OI_CF:  xor a
+        xor a
         ld (o2c),a
 OI_CC:  ld a,(o2f)
         call CelXY             ; BC = x (byte), DE = y
@@ -93,6 +144,7 @@ OI_CC:  ld a,(o2f)
         add hl,hl
         add hl,hl
         add hl,hl
+        or a
         sbc hl,de              ; *14
         ld de,CHFIG_DAT
         add hl,de
@@ -111,15 +163,12 @@ OI_CC:  ld a,(o2f)
         ld (o2c),a
         cp 8
         jr c,OI_CC
-        ld a,(o2f)
-        inc a
+        ret
+
+; A = figura ampliada: as 8 cores dela
+O2CelZoom:
         ld (o2f),a
-        cp CF_N
-        jr c,OI_CF
-        ; celulas ampliadas
         xor a
-        ld (o2f),a
-OI_ZF:  xor a
         ld (o2c),a
 OI_ZC:  call ZCelXY            ; de o2f/o2c
         push bc
@@ -149,24 +198,7 @@ OI_ZC:  call ZCelXY            ; de o2f/o2c
         ld (o2c),a
         cp 8
         jr c,OI_ZC
-        ld a,(o2f)
-        inc a
-        ld (o2f),a
-        cp ZF_N
-        jr c,OI_ZF
-        ; tabela virtual vazia, nada desenhado
-        call O2Clear
-        ld hl,vDrawn
-        ld de,vDrawn+1
-        ld bc,VSLOTS*6-1
-        ld (hl),NO
-        ldir
-        ld a,0xFF
-        ld (vSpCor),a
-        ld (vSpCor+1),a
-        ld (vSpCor+2),a
-        ld (vSpCor+3),a
-        jp O2Sprites
+        ret
 
 ; A = figura de caractere -> BC = x da celula em bytes (cor 0), DE = y
 CelXY:  ld c,a
@@ -518,7 +550,7 @@ OD_Erase:
         ld (iy+2),NO
         ld a,(iy+1)
         add a,(iy+4)
-        cp 184
+        cp 185                 ; passou da linha 184 (a caixa do placar)
         jr c,OE_1
         ld a,1
         ld (hudRedo),a
@@ -634,17 +666,128 @@ CX_TAB: dw 18,184,220,3
         db 0x66
 
 ; texto do placar: HL = 16 indices de glifo (HUD_GLIFOS) + 16 cores do chip
-; desenhado em x = 17 + 8i do chip, y = 199
+; (3 amarelo, 1 vermelho, 7 branco); x = 17 + 8i do chip, y = 199. Cada letra
+; e uma copia (HMMM) de uma celula pronta; so as que mudaram
+HUD_CY  equ 320               ; celulas do placar: glifo g, cor k em (16*(n&15), 320+16*(n>>4)), n = 3g+k
 O2Hud:
-        ld b,16
-        ld a,17
-        ld (hudX),a
+        ld b,0
 OH_L:   push bc
         push hl
-        ld a,(hl)
+        ld e,b
+        ld d,0
+        add hl,de
+        ld a,(hl)              ; glifo
         ld de,16
         add hl,de
-        ld c,(hl)              ; cor
+        ld c,(hl)              ; cor do chip
+        ld e,a
+        ld a,c
+        cp 3
+        ld c,0
+        jr z,OH_K
+        inc c
+        cp 1
+        jr z,OH_K
+        inc c
+OH_K:   ld a,e
+        add a,a
+        add a,e                ; 3g
+        add a,c                ; n
+        ld c,a
+        ; ja esta assim?
+        ld hl,hudDr
+        pop de
+        push de
+        ld a,b
+        ld e,a
+        ld d,0
+        add hl,de
+        ld a,(hl)
+        cp c
+        jr z,OH_N
+        ld (hl),c
+        ld a,c
+        and 15
+        add a,a
+        add a,a
+        add a,a
+        add a,a
+        ld l,a
+        ld h,0
+        ld (c_sx),hl
+        ld a,c
+        rrca
+        rrca
+        rrca
+        rrca
+        and 15
+        add a,a
+        add a,a
+        add a,a
+        add a,a
+        ld l,a
+        ld h,0
+        ld de,HUD_CY
+        add hl,de
+        ld (c_sy),hl
+        ld a,b
+        add a,a
+        add a,a
+        add a,a
+        add a,17
+        call O2X
+        ld l,a
+        ld h,0
+        ld (c_dx),hl
+        ld hl,199-O2_YOFF
+        ld (c_dy),hl
+        ld hl,12
+        ld (c_nx),hl
+        ld hl,14
+        ld (c_ny),hl
+        call CmdBlit
+OH_N:   pop hl
+        pop bc
+        inc b
+        ld a,b
+        cp 16
+        jr c,OH_L
+        ret
+
+; A = glifo do placar: as 3 cores dele
+O2CelHud:
+        ld (o2f),a
+        xor a
+        ld (o2c),a             ; cor (0 amarelo, 1 vermelho, 2 branco)
+OHC_K:  ld a,(o2f)
+        ld c,a
+        add a,a
+        add a,c
+        ld hl,o2c
+        add a,(hl)
+        ld (odK),a             ; n = 3g + k
+        rrca
+        rrca
+        rrca
+        rrca
+        and 15
+        add a,a
+        add a,a
+        add a,a
+        add a,a
+        ld l,a
+        ld h,0
+        ld de,HUD_CY
+        add hl,de
+        push hl
+        ld a,(o2c)
+        ld e,a
+        ld d,0
+        ld hl,HUDK_COR
+        add hl,de
+        ld a,(hl)
+        ld (mkCor),a
+        ld a,(o2f)
         ld l,a
         ld h,0
         add hl,hl
@@ -653,28 +796,27 @@ OH_L:   push bc
         add hl,hl
         add hl,hl
         add hl,hl
-        sbc hl,de              ; *14
+        or a
+        sbc hl,de
         ld de,HUD_GLIFOS
         add hl,de
-        ld a,c
-        call O2Cor
-        ld (mkCor),a
+        ld a,(odK)
+        and 15
+        add a,a
+        add a,a
+        add a,a
+        ld c,a
+        ld b,0
+        pop de
         ld a,7
         ld (mkRows),a
         ld a,2
         ld (mkRep),a
-        ld a,(hudX)
-        call O2X
-        srl a
-        ld c,a
-        ld b,0
-        ld de,199-O2_YOFF
         call PutMask12
-        ld a,(hudX)
-        add a,8
-        ld (hudX),a
-        pop hl
-        inc hl
-        pop bc
-        djnz OH_L
+        ld a,(o2c)
+        inc a
+        ld (o2c),a
+        cp 3
+        jr c,OHC_K
         ret
+HUDK_COR: db 11, 9, 15         ; amarelo, vermelho e branco da paleta
