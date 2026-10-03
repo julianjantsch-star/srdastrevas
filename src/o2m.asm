@@ -138,7 +138,7 @@ Celulas8:
         ld hl,SPR_PAT
         ld bc,SF_N*32
 C8_P:   ld a,(hl)
-        out (VDPDATA),a
+        call VOut
         inc hl
         dec bc
         ld a,b
@@ -360,7 +360,7 @@ D8_P:   add hl,hl
         ld a,0
         jr nc,D8_P1
         ld a,c
-D8_P1:  out (VDPDATA),a
+D8_P1:  call VOut
         djnz D8_P
         pop hl
         ld a,(mkK)
@@ -395,7 +395,7 @@ T8_P:   ld a,(o2c)
         add hl,de
         ld a,(hl)
         pop hl
-        out (VDPDATA),a
+        call VOut
         djnz T8_P
         ld a,(mkRep)
         dec a
@@ -579,24 +579,24 @@ SP8_L:  ld a,(ix+2)
         sub O2_YOFF+1
         cp 211
         jr nc,SP8_OFF
-        out (VDPDATA),a
+        call VOut
         ld a,(ix+1)
         call O2X
-        out (VDPDATA),a
+        call VOut
         ld a,(ix+2)
         add a,a
         add a,a
-        out (VDPDATA),a
+        call VOut
         xor a
-        out (VDPDATA),a
+        call VOut
         jr SP8_N
 SP8_OFF:
         ld a,217
-        out (VDPDATA),a
+        call VOut
         xor a
-        out (VDPDATA),a
-        out (VDPDATA),a
-        out (VDPDATA),a
+        call VOut
+        call VOut
+        call VOut
 SP8_N:  ld de,4
         add ix,de
         djnz SP8_L
@@ -613,13 +613,13 @@ SP8_N:  ld de,4
         ld c,ZPAT8*4
         ld b,4
 SP8_Z:  ld a,d
-        out (VDPDATA),a
+        call VOut
         ld a,e
-        out (VDPDATA),a
+        call VOut
         ld a,c
-        out (VDPDATA),a
+        call VOut
         xor a
-        out (VDPDATA),a
+        call VOut
         ld a,c
         add a,4
         ld c,a
@@ -642,15 +642,15 @@ SP8_Z2: djnz SP8_Z
 SP8_ZOFF:
         ld b,4
 SP8_ZO: ld a,217
-        out (VDPDATA),a
+        call VOut
         xor a
-        out (VDPDATA),a
-        out (VDPDATA),a
-        out (VDPDATA),a
+        call VOut
+        call VOut
+        call VOut
         djnz SP8_ZO
 SP8_FIM:
         ld a,216
-        out (VDPDATA),a
+        call VOut
         ; cores: as que mudaram (planos 0..3 e a ampliada nos 4..7)
         ld ix,vSp
         ld iy,vSpCor
@@ -712,11 +712,11 @@ Cor8Plano:
         pop de
         ld a,b
         ld b,10
-CP8_1:  out (VDPDATA),a
+CP8_1:  call VOut
         djnz CP8_1
         ld a,e
         ld b,6
-CP8_2:  out (VDPDATA),a
+CP8_2:  call VOut
         djnz CP8_2
         pop bc
         ret
@@ -757,20 +757,20 @@ PZ8_1:  ld d,0
         inc hl                 ; coluna 16..23 (byte 2)
         ld b,16
 PZ8_D1: ld a,(hl)
-        out (VDPDATA),a
+        call VOut
         inc hl
         inc hl
         inc hl
         djnz PZ8_D1
         ld b,16
         xor a
-PZ8_D2: out (VDPDATA),a
+PZ8_D2: call VOut
         djnz PZ8_D2
         jr PZ8_N
 PZ8_E:  push hl
         ld b,16
 PZ8_E1: ld a,(hl)
-        out (VDPDATA),a
+        call VOut
         inc hl
         inc hl
         inc hl
@@ -779,7 +779,7 @@ PZ8_E1: ld a,(hl)
         inc hl
         ld b,16
 PZ8_E2: ld a,(hl)
-        out (VDPDATA),a
+        call VOut
         inc hl
         inc hl
         inc hl
@@ -827,7 +827,7 @@ ES8_1:  ld (estI),a
         push af
         call MkSetWr8
         pop af
-        out (VDPDATA),a
+        call VOut
         pop bc
         djnz ES8_L
         ret
@@ -961,7 +961,7 @@ O2Off:  ld a,(modo)
         ld hl,SAT8
 OF_1:   call SetWr
         ld a,216
-        out (VDPDATA),a
+        call VOut
         di
         ld a,0x0A              ; R8: sprites desligados
         out (VDPCTRL),a

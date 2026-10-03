@@ -26,7 +26,7 @@ Adaptação de *Senhor das Trevas!* (Odyssey, Philips 1983 = *Attack of the Time
 | A fala de verdade ("Goodbye, Earthling"…) vem do módulo **The Voice** (chip de fala SP0256 + ROM de fonemas), que **não saiu no Brasil** | não é ruído da CPU; no Odyssey brasileiro ela não existia |
 | Sem o módulo, o rosto mexe a boca com um **resmungo feito pelo próprio chip de som** (i8244: o registrador de 24 bits recarregado quadro a quadro) — é o que se ouvia aqui | é isso que o modo original reproduz |
 | O método do OVNI serve: ler o programa do chip pela grade do relógio (983/3933 Hz) e tocar bit a bit pela interrupção de linha | se o resmungo usa o relógio rápido com padrões arbitrários, a ISR roda a cada 4 linhas (~27 % da CPU) — cabe, porque na cena do rosto quase nada se mexe |
-| Modo moderno | opção: fala amostrada (PCM de 1 bit/4 bits pelo PSG) com as frases do The Voice — decidir depois |
+| Feito (03/10) | os dois modos falam: as frases do The Voice como alofones do SP0256 sintetizados (núcleo do MAME), 4 bits a 7373 Hz pelo volume do canal B, na interrupção de linha (ver README, "A fala") |
 
 ## 3. O desafio novo: fases
 

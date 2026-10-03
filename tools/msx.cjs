@@ -216,10 +216,20 @@ function extraT(op, op2) {
   return e;
 }
 class MSX {
+  banco(j, v) {
+    this.bancos[j] = v;
+    const b = (v * 0x2000) % this.rom.length;
+    this.mem.set(this.rom.subarray(b, b + 0x2000), 0x4000 + j * 0x2000);
+  }
   constructor(rom) {
     this.mem = new Uint8Array(65536);
-    this.romStart = 0x4000; this.romEnd = 0x4000 + rom.length;
-    this.mem.set(rom, 0x4000);
+    this.romStart = 0x4000; this.romEnd = 0xC000;
+    // MegaROM ASCII8 (> 32 KB): 4 janelas de 8 KB (0x4000, 0x6000, 0x8000,
+    // 0xA000), trocadas por escritas em 0x6000/0x6800/0x7000/0x7800. Ao
+    // ligar, o banco 0 em todas (como o openMSX)
+    this.rom = rom; this.ascii8 = rom.length > 0x8000; this.bancos = [0, 0, 0, 0];
+    if (this.ascii8) for (let j = 0; j < 4; j++) this.banco(j, 0);
+    else this.mem.set(rom, 0x4000);
     // BIOS minimo: ENASLT (0x0024, so retorna) e RSLREG (0x0138: in a,(0xA8); ret).
     // A pagina 2 (0x8000-0xBFFF) do cartucho so aparece depois de ENASLT,
     // como na maquina real: o BIOS chama o INIT com a pagina 1 apenas
@@ -243,6 +253,7 @@ class MSX {
       read8: a => { a &= 0xffff; return (a & 0xc000) === 0x8000 && !self.pag2 ? 0xff : self.mem[a]; },
       write8: (a, v) => {
         a &= 0xffff;
+        if (self.ascii8 && a >= 0x6000 && a < 0x8000) { self.banco((a >> 11) & 3, v); return; }
         if (a >= self.romStart && a < self.romEnd) {
           if (self.romWrites.length < 50) self.romWrites.push([a, v, self.cpu ? self.cpu.pc : 0]);
           return;

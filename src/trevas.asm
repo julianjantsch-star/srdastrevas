@@ -2,7 +2,8 @@
 ;  S E N H O R   D A S   T R E V A S   -   MSX2+
 ;  Recriacao do Senhor das Trevas! (Philips Odyssey, 1983) / Attack of
 ;  the Timelord! (Magnavox Odyssey2, 1982, Ed Averett)
-;  SCREEN 5 (G4 - 256x212, 16 cores), cartucho ROM de 32KB
+;  SCREEN 5 (G4 - 256x212, 16 cores), MegaROM ASCII8 de 64 KB: bancos 0-2
+;  fixos em 0x4000-0x9FFF (codigo), bancos 3.. em 0xA000-0xBFFF (a fala)
 ;
 ;  Abertura, fonte, paleta, motor de som, teclado e calibragem vem do
 ;  OVNI 4.6 (mesmo console, mesmo chip). O jogo esta em jogo.asm.
@@ -56,6 +57,16 @@ CHR_H   equ 14
 
 INIT:
         di
+        ; ASCII8: liga os bancos 1 e 2 do codigo antes de passar de 0x6000
+        ; (ao ligar, o mapeador pode estar com o banco 0 em toda janela)
+        xor a
+        ld (0x6000),a
+        inc a
+        ld (0x6800),a
+        inc a
+        ld (0x7000),a
+        inc a
+        ld (0x7800),a
         ld sp,STACK
         ; ROM de 32 KB: liga a pagina 2 (0x8000-0xBFFF) no slot deste cartucho
         call 0x0138            ; RSLREG: A = registrador de slot primario
@@ -94,7 +105,7 @@ INIT:
         ldir
         ld a,0xC3
         ld (IM2VEC),a
-        ld hl,BangIsr
+        ld hl,LinhaIsr
         ld (IM2VEC+1),hl
         ld a,0xC3              ; WaitCmd (trampolim na RAM) = jp WcRapido
         ld (WaitCmd),a
@@ -206,8 +217,28 @@ PsgData:
         db 0,0, 0,0, 0,0, 0, 0xB8, 0,0,0, 0,0, 0
 
 ; A = registrador, E = valor
+; PsgWr para os passos de som: enquanto a fala toca, o volume B (9) e dela
+; e o mixer fica com o tom e o ruido B desligados
+PsgWrS:
+        cp 7
+        jr z,PWS_M
+        cp 9
+        jr nz,PsgWr
+        ld a,(vozOn)
+        or a
+        ret nz
+        ld a,9
+        jr PsgWr
+PWS_M:  ld a,(vozOn)
+        or a
+        ld a,7
+        jr z,PsgWr
+        ld a,e
+        or 0x12
+        ld e,a
+        ld a,7
 PsgWr:
-        di                     ; a interrupcao do ruido lento tambem escreve no PSG
+        di                     ; a interrupcao de linha tambem escreve no PSG
         out (PSGADDR),a
         ld a,e
         out (PSGDATA),a
@@ -318,6 +349,14 @@ CmdFillP:
         xor a
         ld (c_arg),a
         ld a,0x80
+        ld (c_cmd),a
+        jp VdpCmd
+
+; LMMM com TIMP (o preto da celula e transparente)
+CmdBlitT:
+        xor a
+        ld (c_arg),a
+        ld a,0x98
         ld (c_cmd),a
         jp VdpCmd
 
@@ -1170,6 +1209,7 @@ SndBgOff:
         jp SndSilence
 
 SndAllOff:
+        call VozPara
         ld hl,0
         ld (bgPtr),hl
         ld (sfxPtr),hl
@@ -1239,7 +1279,7 @@ SS_L:   ld a,(de)
         push de
         push bc
         ld e,(hl)
-        call PsgWr
+        call PsgWrS
         pop bc
         pop de
         inc de
@@ -1270,34 +1310,220 @@ SFXREGS: db 0,1,2,3,4,5,8,9,10,6,7
 ;  Passo de som: 0xFD, quadros, semente (2 bytes; 0 = continua), nivel do
 ;  bit 1, nivel do bit 0.
 ; =====================================================================
-BangIsr:
+LinhaIsr:
         ex af,af'              ; o jogo alternativo de registradores e so desta rotina
         in a,(VDPCTRL)         ; S#1: bit 0 = FH (a leitura limpa)
         rrca
-        jr nc,BI_FORA
-        exx                    ; HL' = registrador, C' = proxima linha, D'/E' = niveis
-        ld a,c
-        add a,16               ; 4, 20, ... 244, 4
-        ld c,a
+        jr nc,LI_FORA
+        exx                    ; C' = proxima linha; fala: HL' = amostras, DE' = restantes, B' = fase/pausa
+        ld a,(vozOn)
+        or a
+        jr nz,LI_VOZ
+        ld a,c                 ; so o ruido lento: a cada 16 linhas
+        add a,16
+        cp 245
+        jr c,LI_1
+        ld a,4
+LI_1:   ld c,a
         out (VDPCTRL),a
         ld a,19|0x80
         out (VDPCTRL),a
-        ld a,l
-        and 0x21               ; bits 0 e 5 (o AND zera o carry)
-        jp pe,BI_P             ; iguais: fb = 0
-        scf
-BI_P:   rr h
-        rr l                   ; carry = o bit que saiu
-        ld a,8
-        out (PSGADDR),a
-        ld a,d
-        jr c,BI_N
-        ld a,e
-BI_N:   out (PSGDATA),a
+        call LiBang
         exx
-BI_FORA:
+LI_FORA:
         ex af,af'
         ei
+        ret
+; a fala: uma amostra a cada 2 linhas (0, 2, ... 244)
+LI_VOZ: ld a,c
+        add a,2
+        cp 246
+        jr c,LV_1
+        xor a
+LV_1:   ld c,a
+        out (VDPCTRL),a
+        ld a,19|0x80
+        out (VDPCTRL),a
+        ld a,(bgOn)            ; o ruido lento junto, a cada 8 amostras
+        or a
+        jr z,LV_2
+        ld a,c
+        and 15
+        cp 4
+        call z,LiBang
+LV_2:   ld a,d
+        or e
+        jr z,LV_PROX
+        dec de
+        bit 7,b
+        jr nz,LV_SAI           ; pausa: o volume fica
+        ld a,9
+        out (PSGADDR),a
+        ld a,b
+        xor 1                  ; 1 = nibble alto agora, 0 = o baixo (e avanca)
+        ld b,a
+        ld a,(hl)
+        jr z,LV_LO
+        rrca
+        rrca
+        rrca
+        rrca
+        jr LV_OUT
+LV_LO:  inc hl
+LV_OUT: and 15
+        out (PSGDATA),a
+LV_SAI: exx
+        ex af,af'
+        ei
+        ret
+; o proximo alofone da frase
+LV_PROX:
+        ld hl,(vozPtr)
+        ld a,(hl)
+        inc hl
+        ld (vozPtr),hl
+        cp 0xFF
+        jr z,LV_FIM
+        ld l,a
+        ld h,0
+        ld d,h
+        ld e,l
+        add hl,hl
+        add hl,hl
+        add hl,de              ; *5
+        ld de,VOZ_TAB
+        add hl,de
+        ld a,(hl)              ; banco (0xFF = pausa)
+        inc hl
+        ld b,0
+        cp 0xFF
+        jr nz,LV_B
+        ld b,0x80
+        jr LV_C
+LV_B:   ld (0x7800),a          ; ASCII8: o banco do alofone em 0xA000
+LV_C:   ld e,(hl)
+        inc hl
+        ld d,(hl)
+        inc hl
+        push de
+        ld e,(hl)
+        inc hl
+        ld d,(hl)              ; DE' = amostras
+        pop hl                 ; HL' = endereco
+        jr LV_SAI
+LV_FIM: xor a
+        ld (vozOn),a
+        ld a,9
+        out (PSGADDR),a
+        xor a
+        out (PSGDATA),a
+        ld a,(bgOn)
+        or a
+        jr nz,LV_SAI           ; o ruido lento segue sozinho
+        ld a,(r0sh)            ; ninguem mais: desliga a interrupcao de linha
+        out (VDPCTRL),a
+        ld a,0|0x80
+        out (VDPCTRL),a
+        ld hl,WcRapido
+        ld (WaitCmd+1),hl
+        jr LV_SAI
+
+; um passo do ruido lento (i8244: fb = bit0 ^ bit5, desloca, sai o bit 0 no
+; volume do canal A); estado na RAM. Preserva BC, DE, HL
+LiBang: push hl
+        ld hl,(bgReg)
+        ld a,l
+        and 0x21               ; bits 0 e 5 (o AND zera o carry)
+        jp pe,LB_P             ; iguais: fb = 0
+        scf
+LB_P:   rr h
+        rr l                   ; carry = o bit que saiu
+        ld (bgReg),hl
+        ld a,8
+        out (PSGADDR),a
+        ld a,(bgN1)
+        jr c,LB_N
+        ld a,(bgN0)
+LB_N:   out (PSGDATA),a
+        pop hl
+        ret
+
+; A = frase (VOZ_FR): comeca a falar. A interrupcao de linha toca
+VozFala:
+        ld l,a
+        ld h,0
+        add hl,hl
+        ld de,VOZ_FR
+        add hl,de
+        ld e,(hl)
+        inc hl
+        ld d,(hl)
+        di
+        ld (vozPtr),de
+        exx
+        ld de,0                ; nada tocando: a 1a interrupcao pega o 1o alofone
+        ld b,0
+        exx
+        ld a,7                 ; mixer: tom e ruido B desligados
+        out (PSGADDR),a
+        in a,(0xA2)
+        or 0x12
+        out (PSGDATA),a
+        ld a,(vozOn)
+        ld c,a
+        ld a,1
+        ld (vozOn),a
+        ld a,c
+        or a
+        jr nz,VF_FIM           ; ja falava: so trocou a frase
+        ld a,(bgOn)
+        or a
+        jr nz,VF_FIM           ; a interrupcao de linha ja corre (ruido lento)
+        exx
+        ld c,0
+        exx
+        ld hl,WcLento
+        ld (WaitCmd+1),hl
+        ld a,1                 ; R#15 = 1 e um FH velho limpo
+        out (VDPCTRL),a
+        ld a,15|0x80
+        out (VDPCTRL),a
+        in a,(VDPCTRL)
+        xor a                  ; primeira linha: 0
+        out (VDPCTRL),a
+        ld a,19|0x80
+        out (VDPCTRL),a
+        ld a,(r0sh)
+        or 0x10                ; IE1
+        out (VDPCTRL),a
+        ld a,0|0x80
+        out (VDPCTRL),a
+VF_FIM: ei
+        ret
+
+; cala a fala (o ruido lento, se tocando, continua)
+VozPara:
+        di
+        ld a,(vozOn)
+        or a
+        jr z,VP_FIM
+        xor a
+        ld (vozOn),a
+        ld a,9
+        out (PSGADDR),a
+        xor a
+        out (PSGDATA),a
+        ld a,(bgOn)
+        or a
+        jr nz,VP_FIM
+        ld a,(r0sh)
+        out (VDPCTRL),a
+        ld a,0|0x80
+        out (VDPCTRL),a
+        in a,(VDPCTRL)         ; FH pendente (o R#15 esta em 1)
+        ld hl,WcRapido
+        ld (WaitCmd+1),hl
+VP_FIM: ei
         ret
 
 ; HL -> cabecalho 0xFD, semente (2 bytes; 0 = o registrador continua), nivel
@@ -1316,25 +1542,25 @@ SfxBang:
         inc hl
         push hl
         di
-        push bc
-        push de
-        exx
-        pop de                 ; semente (0 = o registrador continua de onde esta)
         ld a,d
         or e
-        jr z,SB_1
-        ex de,hl               ; HL' = semente
-SB_1:   pop de                 ; D' = nivel do bit 1, E' = nivel do bit 0
-        ld a,(bgOn)
-        or a
-        jr nz,SB_2
-        ld c,228               ; ligando agora: C' = primeira linha (228, 244, 4, 20, ...)
-SB_2:   exx
+        jr z,SB_1              ; 0 = o registrador continua de onde esta
+        ld (bgReg),de
+SB_1:   ld a,b
+        ld (bgN1),a
+        ld a,c
+        ld (bgN0),a
         ld a,(bgOn)
         or a
         jr nz,SB_FIM           ; ja tocando: so mudaram a semente e os niveis
         inc a
         ld (bgOn),a
+        ld a,(vozOn)
+        or a
+        jr nz,SB_FIM           ; a fala ja liga a interrupcao de linha
+        exx
+        ld c,228               ; ligando agora: C' = primeira linha (228, 244, 4, 20, ...)
+        exx
         ld hl,WcLento          ; o WaitCmd passa a ser o de porta fechada
         ld (WaitCmd+1),hl
         ld a,1                 ; R#15 = 1 e um FH velho limpo
@@ -1355,7 +1581,8 @@ SB_FIM: ei
         pop hl
         ret
 
-; desliga a interrupcao de linha e cala o canal A (preserva HL, DE, BC)
+; para o ruido lento e cala o canal A (preserva HL, DE, BC); a interrupcao
+; de linha so desliga se a fala nao estiver tocando
 BangOff:
         ld a,(bgOn)
         or a
@@ -1363,6 +1590,9 @@ BangOff:
         di
         xor a
         ld (bgOn),a
+        ld a,(vozOn)
+        or a
+        jr nz,BO_1
         push hl
         ld hl,WcRapido
         ld (WaitCmd+1),hl
@@ -1372,7 +1602,7 @@ BangOff:
         ld a,0|0x80
         out (VDPCTRL),a
         in a,(VDPCTRL)         ; FH pendente (o R#15 esta em 1)
-        ld a,8
+BO_1:   ld a,8
         out (PSGADDR),a
         xor a
         out (PSGDATA),a
@@ -1638,7 +1868,9 @@ TXT_TECLA:   db "APERTE ESPACO",0
 #include "font.inc"
 #include "o2.asm"
 #include "o2dados.inc"
+O2_ETAPAS equ 1+CF_N+ZF_N+HUD_NG
 #include "o2m.asm"
+#include "voz.inc"
 
 
 ; =====================================================================
@@ -1841,6 +2073,11 @@ evTa:      ds 1               ; tipos do par que se encostou (estrela 0, circulo
 evTb:      ds 1
 r0sh:      ds 1               ; copia do R#0 (modo de video) para ligar/desligar o IE1
 bgOn:      ds 1               ; ruido lento tocando (interrupcao de linha ligada)
+bgReg:     ds 2               ; registrador do ruido lento (16 bits)
+bgN1:      ds 1               ; volume do canal A com o bit 1
+bgN0:      ds 1               ; e com o bit 0
+vozOn:     ds 1               ; a fala tocando (interrupcao de linha a cada 2 linhas)
+vozPtr:    ds 2               ; proximo alofone da frase
 WaitCmd:   ds 3               ; trampolim: jp WcRapido (normal) ou jp WcLento (ruido lento tocando)
 frX:       ds 1
 frY:       ds 1
@@ -1873,6 +2110,7 @@ ptN:       ds 1
 ; ---- Senhor das Trevas ----
 nivel:     ds 1
 abF:       ds 2
+abVoz:     ds 1               ; a fala desta abertura ja saiu
 abPtr:     ds 2
 raioOn:    ds 1
 raK:       ds 1

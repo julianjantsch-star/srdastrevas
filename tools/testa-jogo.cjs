@@ -21,7 +21,13 @@ const armas = () => { const v = []; for (let i = 0; i < 3; i++) { const b = sym.
 m.runFrames(150); m.tap("SPACE", 3, 30); m.runFrames(120);
 m.tap(MODO, 3, 2);
 m.runFrames(200); foto("1-raios");
-ok(rd("estado") === 0 && rd16("abF") > 50, "abertura tocando (quadro " + rd16("abF") + ")");
+ok(rd("estado") === 0 && rd16("abF") > 20, "abertura tocando (quadro " + rd16("abF") + ")");
+ok(rd("vozOn") === 1, "o Senhor das Trevas fala com o rosto na tela");
+{ // a fala: o volume B do PSG muda a cada 2 linhas (123 por quadro, menos as pausas)
+  const n0 = m.psgLog.length; m.runFrames(30);
+  const v = m.psgLog.slice(n0).filter(e => e[1] === 9).map(e => e[2]);
+  ok(v.length > 600 && new Set(v).size > 5, "amostras da fala no canal B: " + v.length + " em 30 quadros, " + new Set(v).size + " niveis");
+}
 m.runFrames(200); foto("2-fila");
 ok(rd("filaSaiu") === 1 && naves().length >= 4, "a fila sai da cruz: " + naves().length + " naves");
 m.runFrames(140); foto("3-canhao");

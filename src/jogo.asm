@@ -108,6 +108,7 @@ NovaPartida:
         call DesenhaPlacar
 NovaRodada:
         xor a
+        ld (abVoz),a
         ld (estado),a
         ld (abF),a
         ld (abF+1),a
@@ -264,8 +265,44 @@ QA_F1:  ld hl,(abF)
 QA_F2:  call Combate1          ; a fila anda (e, com o canhao, o resto)
 QA_N:   ld hl,(abF)
         inc hl
-        ld (abF),hl
+        ; a fala (The Voice): comeca com o rosto ja na tela e o segura, os
+        ; raios girando, ate acabar (no original o rosto fica o tempo da frase)
+        ld a,h
+        or a
+        jr nz,QA_N2
+        ld a,l
+        cp VZ_AB_INI
+        jr nz,QA_N1
+        ld a,(abVoz)
+        or a
+        jr nz,QA_N2
+        inc a
+        ld (abVoz),a
+        push hl
+        call Rnd
+        ld c,11                ; uma das 11 primeiras frases do cartucho
+        call Modulo
+        call VozFala
+        pop hl
+        jr QA_N2
+QA_N1:  cp VZ_AB_VOLTA
+        jr nz,QA_N2
+        ld a,(vozOn)
+        or a
+        jr z,QA_N2
+        ld hl,VZ_AB_LACO
+QA_N2:  ld (abF),hl
         ret
+
+VZ_AB_INI   equ 33             ; medido: a 1a palavra sai 29 quadros depois do rosto
+VZ_AB_LACO  equ 32             ; enquanto fala, os quadros 32..51 (rosto e raios) se repetem
+VZ_AB_VOLTA equ 52
+
+; A mod C (C > 0)
+Modulo: cp c
+        ret c
+        sub c
+        jr Modulo
 
 ; A = raio (k | base << 4) ou NO: os 8 raios em volta do centro
 Raios:  cp NO
@@ -367,7 +404,17 @@ QCombate:
         ld (estado),a
         xor a
         ld (fimT),a
-        ret
+        ; nivel limpo: o Senhor das Trevas elogia (a 3a lista de frases do cartucho)
+        call Rnd
+        ld c,5
+        call Modulo
+        ld e,a
+        ld d,0
+        ld hl,VZ_FIM_TAB
+        add hl,de
+        ld a,(hl)
+        jp VozFala
+VZ_FIM_TAB: db 12, 11, 12, 13, 12
 
 ; um quadro do combate (tambem roda durante a abertura, depois da fila nascer)
 Combate1:

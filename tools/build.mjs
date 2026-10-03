@@ -36,7 +36,8 @@ for (const l of asm.assembledLines) {
 }
 fs.writeFileSync(LST, lines.join("\n") + "\n");
 
-const ROM_BASE = 0x4000, ROM_SIZE = 0x8000;
+// MegaROM ASCII8: bancos 0-2 (0x4000-0x9FFF) = codigo; 3.. = a fala (src/voz.bin)
+const ROM_BASE = 0x4000, ROM_SIZE = 0x6000, ROM_TOTAL = 0x10000;
 const rom = Buffer.alloc(ROM_SIZE, 0);
 let maxAddr = ROM_BASE, overflow = false;
 for (const l of asm.assembledLines) {
@@ -69,7 +70,7 @@ for (const l of asm.assembledLines) {
 }
 
 if (errors) { console.error("\n" + errors + " erro(s) de montagem. ROM nao gerada."); process.exit(1); }
-if (overflow) { console.error("Codigo fora da faixa 0x4000-0xBFFF."); process.exit(1); }
+if (overflow) { console.error("Codigo fora da faixa 0x4000-0x9FFF (bancos fixos do ASCII8)."); process.exit(1); }
 
 // symbols
 const syms = [];
@@ -77,7 +78,12 @@ for (const scope of asm.scopes) for (const [name, info] of scope.symbols) syms.p
 syms.sort((a, b) => a[1] - b[1]);
 fs.writeFileSync(SYM, syms.map(s => s[1].toString(16).padStart(4, "0") + " " + s[0]).join("\n") + "\n");
 
-fs.writeFileSync(OUT, rom);
+const VOZ = path.join(ROOT, "src", "voz.bin");
+const voz = fs.existsSync(VOZ) ? fs.readFileSync(VOZ) : Buffer.alloc(0);
+if (ROM_SIZE + voz.length > ROM_TOTAL) { console.error("A fala nao cabe na MegaROM."); process.exit(1); }
+const total = Buffer.alloc(ROM_TOTAL, 0xff);
+rom.copy(total, 0); voz.copy(total, ROM_SIZE);
+fs.writeFileSync(OUT, total);
 const used = maxAddr - ROM_BASE;
 console.log("OK  ROM: " + OUT);
-console.log("    codigo/dados ate 0x" + maxAddr.toString(16) + "  (" + used + " bytes usados, " + (ROM_SIZE - used) + " livres de 32768)");
+console.log("    codigo/dados ate 0x" + maxAddr.toString(16) + "  (" + used + " bytes usados, " + (ROM_SIZE - used) + " livres de " + ROM_SIZE + "); fala: " + voz.length + " bytes; MegaROM ASCII8 de " + (ROM_TOTAL >> 10) + " KB");

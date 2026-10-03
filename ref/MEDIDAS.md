@@ -65,3 +65,10 @@ Cores de objeto (3 bits): `0` cinza escuro, `1` vermelho, `2` verde, `3` amarelo
 * **Caminho da fila**: sorteado — quatro rodadas gravadas saem do mesmo ponto (78, 98) e vão para lados diferentes.
 * **Caixa do placar**: barras horizontais nas linhas 192–194 e 216–218, verticais de 2 unidades nas pontas (x 8 e 152 do chip).
 * **Sons**: tiro = ruído rápido, 1967 Hz ×2, ruído, zumbido de 164 Hz ×4; estouro = (ruído, 164 Hz, 41 Hz subindo) ×3, 31 quadros; marcha de fundo = ciclo de 36 quadros de 41 Hz; arma solta = 164/328 Hz + ruído; abertura = ruídos lentos (983 Hz) com as sementes do chip. Todos convertidos automaticamente (`tools/gen_o2.cjs`).
+
+## A fala (The Voice), medida em 03/10
+
+* MAME com `-cart1 voice -cart2 timelord` (lista de software `videopac`). O jogo escreve na RAM externa (P1 & 0x50 = 0) no endereço 0x80 + alofone, com o bit 5 do dado em 1; 0x64 abre e fecha a frase.
+* **14 frases** no cartucho (0x105–0x21F, bit 7 ligado, fim = 0x01). Tabela em 0x25A: abertura = uma das 11 primeiras (sorteada; 40 aberturas gravadas, todas as 11 apareceram); depois 94 a6 3d 83 b5 b5 e d3 c4 d3 ea d3 (as três últimas: "A commendable defense", "Not bad human", "You are a worthy opponent" — elogios, que o port usa ao limpar o nível; o robô do MAME não limpou nível para confirmar o momento).
+* A 1ª palavra sai **29 quadros depois do rosto**; com a fala, o rosto fica 172 quadros em vez de 78 (o jogo espera a frase acabar e segue ~33 quadros depois).
+* O chip roda a 3,12 MHz ÷ 336 = **9286 Hz**: as durações das frases gravadas no MAME batem com a síntese avulsa (1,81 s = "Seize the planet" etc.).

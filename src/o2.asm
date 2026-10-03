@@ -50,7 +50,7 @@ O2Prepara:
 ; uma etapa por chamada (a tela ON chama uma por quadro): 0 = padroes dos
 ; sprites; depois cada figura de caractere, cada ampliada e cada glifo do
 ; placar, em todas as cores
-O2_ETAPAS equ 1+CF_N+ZF_N+HUD_NG
+; O2_ETAPAS (1+CF_N+ZF_N+HUD_NG) fica depois do o2dados.inc (equ adiantado vira 0)
 O2Passo:
         ld a,(o2Etapa)
         cp O2_ETAPAS
@@ -118,7 +118,7 @@ O2Padroes:
         ld hl,SPR_PAT
         ld bc,SF_N*32
 OI_P:   ld a,(hl)
-        out (VDPDATA),a
+        call VOut
         inc hl
         dec bc
         ld a,b
@@ -298,7 +298,7 @@ PM_B1:  add hl,hl
         or c
         ld c,a
 PM_B2:  ld a,c
-        out (VDPDATA),a
+        call VOut
         djnz PM_B
         pop hl
         ld a,(mkK)
@@ -340,7 +340,7 @@ PZ_5:   rlc c
         or e
         ld e,a
 PZ_6:   ld a,e
-        out (VDPDATA),a
+        call VOut
         djnz PZ_4
         pop bc
         djnz PZ_3
@@ -469,8 +469,15 @@ OD_Z:   ; figura ampliada: y, x, figura, cor
         sub O2_YOFF
         jp c,OD_HIDE
         ld (odY),a
+        ld c,a
+        ld a,184               ; recorta acima da caixa do placar (nao pisca o placar)
+        sub c
+        jp c,OD_HIDE
+        jp z,OD_HIDE
+        cp 32
+        jr c,OD_ZH
         ld a,32
-        ld (odH),a
+OD_ZH:  ld (odH),a
         ld a,24
         ld (odW),a
         ld a,(ix+3)
@@ -518,7 +525,12 @@ OD_CHG: call OD_Erase
         ld a,(odH)
         ld l,a
         ld (c_ny),hl
-        call CmdBlit
+        ld a,(odW)
+        cp 24                  ; ampliada: o fundo preto da celula nao cobre o placar
+        call nz,CmdBlit
+        ld a,(odW)
+        cp 24
+        call z,CmdBlitT
         ld a,(odX)
         ld (iy+0),a
         ld a,(odY)
@@ -584,28 +596,28 @@ OS_L:   ld a,(ix+2)
         sub O2_YOFF+1          ; o V9938 desenha o sprite uma linha abaixo de Y
         cp 211
         jr nc,OS_OFF
-        out (VDPDATA),a
+        call VOut
         ld a,(ix+1)
         call O2X
-        out (VDPDATA),a
+        call VOut
         ld a,(ix+2)
         add a,a
         add a,a
-        out (VDPDATA),a
+        call VOut
         xor a
-        out (VDPDATA),a
+        call VOut
         jr OS_N
 OS_OFF: ld a,217
-        out (VDPDATA),a
+        call VOut
         xor a
-        out (VDPDATA),a
-        out (VDPDATA),a
-        out (VDPDATA),a
+        call VOut
+        call VOut
+        call VOut
 OS_N:   ld de,4
         add ix,de
         djnz OS_L
         ld a,216               ; fim da lista de sprites
-        out (VDPDATA),a
+        call VOut
         ; cores (so as que mudaram)
         ld ix,vSp
         ld iy,vSpCor
@@ -631,7 +643,7 @@ OS_C:   ld a,(ix+3)
         ld a,(iy+0)
         call O2Cor
         ld b,16
-OS_CL:  out (VDPDATA),a
+OS_CL:  call VOut
         djnz OS_CL
 OS_CN:  ld de,4
         add ix,de
@@ -820,3 +832,8 @@ OHC_K:  ld a,(o2f)
         jr c,OHC_K
         ret
 HUDK_COR: db 11, 9, 15         ; amarelo, vermelho e branco da paleta
+
+; escrita na VRAM com folga: o V9938 com a tela e os sprites ligados (e o
+; motor de comandos copiando) perde bytes escritos em menos de ~29 ciclos
+VOut:   out (VDPDATA),a
+        ret
