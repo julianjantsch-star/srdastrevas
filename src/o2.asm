@@ -412,8 +412,9 @@ OCL:    ld (hl),NO
 ; ---------------------------------------------------------------------
 ; leva a tabela virtual para a tela
 O2Draw:
-        ; duas passadas: primeiro apaga o que mudou, depois desenha (senao a
-        ; metade do canhao que se move apaga a outra metade ja desenhada)
+        ; duas passadas para o canhao: primeiro apaga as duas metades, depois
+        ; desenha (senao a que se move apaga a outra); as naves apagam e
+        ; desenham juntas, para nao piscar
         ld a,1
         ld (drApaga),a
         call OD_LOOP
@@ -426,6 +427,15 @@ OD_LOOP:
         ld iy,vDrawn
         ld b,VSLOTS
 OD_L:   push bc
+        ld a,(drApaga)         ; 1a passada: so as duas metades do canhao
+        or a
+        jr z,OD_L_P2
+        ld a,b
+        cp 13-SLOT_PL
+        jr z,OD_L_P2
+        cp 13-SLOT_PL-1
+        jp nz,OD_NEXT
+OD_L_P2:
         ld a,b
         cp 1                   ; o ultimo e a figura ampliada
         jr z,OD_Z
