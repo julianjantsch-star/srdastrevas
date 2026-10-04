@@ -420,6 +420,16 @@ MkSetWr8:
 ; leva a tabela virtual para a tela do modo 1
 O2Draw8:
         call Estrelas8
+        ; duas passadas: primeiro apaga o que mudou, depois desenha (senao a
+        ; metade do canhao que se move apaga a outra metade ja desenhada)
+        ld a,1
+        ld (drApaga),a
+        call D8_LOOP
+        xor a
+        ld (drApaga),a
+        call D8_LOOP
+        jp Sprites8
+D8_LOOP:
         ld ix,vCh
         ld iy,vDrawn
         ld b,12
@@ -515,6 +525,9 @@ D8_CMP: ld a,(odX)
         cp (iy+2)
         jr z,D8_NEXT
 D8_CHG: call OD_Erase
+        ld a,(drApaga)
+        or a
+        jp nz,D8_NEXT
         ld hl,(odSX)
         ld (c_sx),hl
         ld hl,(odSY)
@@ -554,7 +567,7 @@ D8_NEXT:
         pop bc
         dec b
         jp nz,D8_SL
-        jp Sprites8
+        ret
 
 ; ---------------------------------------------------------------------
 ; sprites do modo 1: as 4 figuras (0..3) e a ampliada (planos 4..7)

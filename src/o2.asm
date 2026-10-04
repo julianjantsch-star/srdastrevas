@@ -412,6 +412,16 @@ OCL:    ld (hl),NO
 ; ---------------------------------------------------------------------
 ; leva a tabela virtual para a tela
 O2Draw:
+        ; duas passadas: primeiro apaga o que mudou, depois desenha (senao a
+        ; metade do canhao que se move apaga a outra metade ja desenhada)
+        ld a,1
+        ld (drApaga),a
+        call OD_LOOP
+        xor a
+        ld (drApaga),a
+        call OD_LOOP
+        jp O2Sprites
+OD_LOOP:
         ld ix,vCh
         ld iy,vDrawn
         ld b,VSLOTS
@@ -507,6 +517,9 @@ OD_CMP: ; igual ao desenhado? (x, y, chave)
         cp (iy+2)
         jr z,OD_NEXT
 OD_CHG: call OD_Erase
+        ld a,(drApaga)
+        or a
+        jp nz,OD_NEXT
         ; copia a celula
         ld hl,(odSX)
         ld (c_sx),hl
@@ -552,7 +565,7 @@ OD_NEXT:
         pop bc
         dec b
         jp nz,OD_L
-        jp O2Sprites
+        ret
 
 ; apaga o que este slot desenhou (IY), se desenhou
 OD_Erase:

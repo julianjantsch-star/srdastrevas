@@ -1079,7 +1079,7 @@ MA_ANIQ:
         cp W_ANIQ
         jr nz,MA_NUCL
         ; aniquilador: cai 1 por quadro; no chao rola meio passo por quadro
-        ; na direcao do canhao (some depois de ~4 s rolando); pulsa verde/amarelo
+        ; na direcao do canhao e some depois de 65 quadros (32 unidades); pulsa verde/amarelo
         ld a,(ix+3)
         or a
         jr nz,MA_ROLA
@@ -1088,7 +1088,7 @@ MA_ANIQ:
         cp ANIQ_CHAO
         jr c,MA_AF
         ld (ix+1),ANIQ_CHAO
-        ld (ix+3),1
+        ld (ix+3),256-64       ; medido: rola 65 quadros (32 unidades) e some
         jr MA_AF
 MA_ROLA:
         inc (ix+3)

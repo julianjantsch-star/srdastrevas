@@ -57,7 +57,7 @@ Cores de objeto (3 bits): `0` cinza escuro, `1` vermelho, `2` verde, `3` amarelo
 
 ## Mais medidas (03/10)
 
-* **Armas por nível**: nível 1 só mísseis; nível 2 sobretudo minas (87 de 103); nível 3 entram os aniquiladores (4 formas, verde/amarelo: caem 1/quadro e, no chão, rolam ½/quadro para o canhão). O matador nucleônico (losango, 2 formas) está na tabela de formas do cartucho (0xDEA, 0xDF2), mas o robô não chegou ao nível 4 para vê-lo voar.
+* **Armas por nível**: nível 1 só mísseis; nível 2 sobretudo minas (87 de 103); nível 3 entram os aniquiladores (4 formas, verde/amarelo: caem 1/quadro e, no chão, rolam ½/quadro para o canhão por 65 quadros — 32 unidades — e somem; parado longe, o canhão escapa). O matador nucleônico (losango, 2 formas) está na tabela de formas do cartucho (0xDEA, 0xDF2), mas o robô não chegou ao nível 4 para vê-lo voar.
 * **Estouro de nave**: a figura 0 (o laser) fica onde acertou e passa por ponto, ponto maior, anel, anel grande, com a cor subindo — 31 quadros. Os 5 pontos entram +2 e, 4 quadros depois, +3.
 * **Fim de nível**: depois da última nave o canhão continua livre ~116 quadros; tudo some, 4 quadros, nova abertura.
 * **Morte**: as naves congelam; figura 0 no canhão e figura 1 ampliada (169, x do canhão) passam pelos mesmos pontos e anéis por 62 quadros; tela vazia; partida nova com o recorde atualizado. **Uma vida só.**

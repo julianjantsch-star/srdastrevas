@@ -2147,7 +2147,8 @@ ptN:       ds 1
 ; ---- Senhor das Trevas ----
 nivel:     ds 1
 abF:       ds 2
-abVoz:     ds 1               ; a fala desta abertura ja saiu
+abVoz:     ds 1
+drApaga:   ds 1               ; O2Draw: 1 = passada que so apaga               ; a fala desta abertura ja saiu
 abPtr:     ds 2
 raioOn:    ds 1
 raK:       ds 1

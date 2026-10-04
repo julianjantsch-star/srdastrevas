@@ -101,7 +101,7 @@ def main(sp_cpp, voice_zip):
         v = round(Nv[a_] + Nv[b_] + Nv[c_], 6)
         if v not in trios or max(a_, b_, c_) < max(trios[v]): trios[v] = (a_, b_, c_)
   vals = np.array(sorted(trios))
-  u_all = U0 + todos[::7] / ref * GANHO
+  u_all = np.concatenate([U0 + todos[::7] / ref * GANHO, np.tile(np.linspace(0, U0, 150), 3)])
   vals = poda(vals, u_all, 256)
   tab_par = [(v,) + trios[round(float(v), 6)] for v in vals]
   def quant_arr(x):
@@ -120,10 +120,17 @@ def main(sp_cpp, voice_zip):
     n = int(len(c) * F_MSX / F_CHIP)
     return np.interp(np.arange(n) * F_CHIP / F_MSX, np.arange(len(c)), c)
 
+  # rampas de entrada e saida: o volume vai de 0 ao nivel do silencio (e
+  # volta) em 20 ms, senao a frase comeca e termina com um estalo
+  NR = 150
+  rampa = (np.linspace(0, U0, NR) - U0) * ref / GANHO
+  RAMPA_SOBE, RAMPA_DESCE = 0x70, 0x71
+  cortes[RAMPA_SOBE] = rampa
+  cortes[RAMPA_DESCE] = rampa[::-1]
   codigos = sorted(cortes)
   tab, dados, banco, pos = [], [bytearray()], BANCO0, 0
   for k in codigos:
-    c = ream(cortes[k], k < 64 and AL[k] in CHIADAS)
+    c = np.asarray(cortes[k], float) if k in (RAMPA_SOBE, RAMPA_DESCE) else ream(cortes[k], k < 64 and AL[k] in CHIADAS)
     n = len(c)
     if k <= 4:                                       # pausa: so a duracao
       tab.append((k, 0xFF, 0, n)); continue
@@ -147,11 +154,11 @@ def main(sp_cpp, voice_zip):
        "; alofone: banco (0xFF = pausa), endereco em 0xA000-0xBFFF, amostras (1 por byte)",
        "VOZ_TAB:"]
   for k, b, ad, n in tab:
-    o.append("  db 0x%02x\n  dw 0x%04x, %d     ; %s" % (b, ad, n, AL[k] if k < 64 else "0x%02x" % k))
+    o.append("  db 0x%02x\n  dw 0x%04x, %d     ; %s" % (b, ad, n, AL[k] if k < 64 else {0x70: "rampa sobe", 0x71: "rampa desce"}.get(k, "0x%02x" % k)))
   o.append("VOZ_FR:")
   for i in range(len(FRASES)): o.append("  dw VOZ_F%d" % i)
   for i, (nome, s) in enumerate(FRASES):
-    seq = [0x64] + [int(x, 16) for x in s.split()]
+    seq = [0x70, 0x64] + [int(x, 16) for x in s.split()] + [0x71]
     o.append("VOZ_F%d:  ; %s\n  db %s, 0xFF" % (i, nome, ",".join(str(idx[x]) for x in seq)))
   open(os.path.join(SRC, "voz.inc"), "w").write("\n".join(o) + "\n")
   print("alofones", len(tab), "bancos", len(dados), "bytes", len(bin_), "taxa", round(F_MSX))
