@@ -281,9 +281,7 @@ QA_N:   ld hl,(abF)
         inc a
         ld (abVoz),a
         push hl
-        call Rnd
-        ld c,11                ; uma das 11 primeiras frases do cartucho
-        call Modulo
+        call FraseAbertura
         call VozFala
         pop hl
         jr QA_N2
@@ -295,6 +293,29 @@ QA_N1:  cp VZ_AB_VOLTA
         ld hl,VZ_AB_LACO
 QA_N2:  ld (abF),hl
         ret
+
+; como o cartucho (0x240): niveis 1-4 sorteiam na tabela de 16 (algumas
+; frases valem 2 ou 3), do nivel 5 em diante na de 4 (os elogios). O
+; original sorteia pelo timer do 8048; aqui pelo Rnd
+FraseAbertura:
+        call Rnd
+        ld c,a
+        ld a,(nivel)
+        cp 5
+        ld a,c
+        ld hl,VZ_SORTE4
+        jr nc,FA_4
+        and 15
+        ld hl,VZ_SORTE16
+        jr FA_T
+FA_4:   and 3
+FA_T:   ld e,a
+        ld d,0
+        add hl,de
+        ld a,(hl)
+        ret
+VZ_SORTE16: db 0,1,2,3,4,5,6,7,8,9,10,8,9,3,7,10   ; 0x25A do cartucho
+VZ_SORTE4:  db 12,11,12,13                         ; 0x26B
 
 VZ_AB_INI   equ 33             ; medido: a 1a palavra sai 29 quadros depois do rosto
 VZ_AB_LACO  equ 32             ; enquanto fala, os quadros 32..51 (rosto e raios) se repetem
@@ -406,17 +427,7 @@ QCombate:
         ld (estado),a
         xor a
         ld (fimT),a
-        ; nivel limpo: o Senhor das Trevas elogia (a 3a lista de frases do cartucho)
-        call Rnd
-        ld c,5
-        call Modulo
-        ld e,a
-        ld d,0
-        ld hl,VZ_FIM_TAB
-        add hl,de
-        ld a,(hl)
-        jp VozFala
-VZ_FIM_TAB: db 12, 11, 12, 13, 12
+        ret
 
 ; um quadro do combate (tambem roda durante a abertura, depois da fila nascer)
 Combate1:

@@ -21,7 +21,7 @@ PPIB    equ 0xA9
 STACK   equ 0xF000
 IM2TAB  equ 0xD000        ; tabela de vetores do IM 2 (257 bytes iguais a IM2VEC>>8)
 IM2VEC  equ 0xD1D1
-VZ_TB   equ 0xD400        ; fala: volume B do par n em VZ_TB+n, volume C em VZ_TB+256+n        ; para onde a tabela manda: jp BangIsr
+VZ_TB   equ 0xD400        ; fala: volumes A, B e C do trio n em VZ_TB+n, +256+n, +512+n        ; para onde a tabela manda: jp BangIsr
 SCRW    equ 256
 SCRH    equ 212
 
@@ -97,13 +97,9 @@ INIT:
         ld bc,RAM_FIM-0xC000-1
         ld (hl),0
         ldir
-        ld hl,VOZ_PB           ; pares de volume da fala na RAM (alinhados em 256)
+        ld hl,VOZ_PA           ; trios de volume da fala na RAM (alinhados em 256)
         ld de,VZ_TB
-        ld bc,VOZ_NPAR
-        ldir
-        ld hl,VOZ_PC
-        ld de,VZ_TB+256
-        ld bc,VOZ_NPAR
+        ld bc,VOZ_NPAR*3
         ldir
         ; IM 2: tabela de 257 bytes iguais (o barramento do MSX flutua no
         ; reconhecimento) -> vetor IM2VEC = jp BangIsr (50_sons)
@@ -226,16 +222,16 @@ PsgData:
         db 0,0, 0,0, 0,0, 0, 0xB8, 0,0,0, 0,0, 0
 
 ; A = registrador, E = valor
-; PsgWr para os passos de som: enquanto a fala toca, os volumes B e C (9, 10)
-; sao dela e o mixer fica com o tom e o ruido B e C desligados
+; PsgWr para os passos de som: enquanto a fala toca, os volumes (8, 9, 10)
+; sao dela e o mixer fica com tons e ruido desligados
 PsgWrS:
         cp 7
         jr z,PWS_M
-        cp 9
+        cp 8
         jr c,PsgWr
         cp 11
         jr nc,PsgWr
-        ld c,a                 ; 9 ou 10: da fala enquanto ela toca
+        ld c,a                 ; 8, 9 ou 10: da fala enquanto ela toca
         ld a,(vozOn)
         or a
         ret nz
@@ -246,7 +242,7 @@ PWS_M:  ld a,(vozOn)
         ld a,7
         jr z,PsgWr
         ld a,e
-        or 0x36
+        or 0x3F
         ld e,a
         ld a,7
 PsgWr:
@@ -1336,10 +1332,7 @@ LinhaIsr:
         in a,(VDPCTRL)         ; S#1: bit 0 = FH (a leitura limpa)
         rrca
         jr nc,LI_FORA
-        exx                    ; C' = proxima linha; fala: HL' = amostras, DE' = restantes, B' = fase/pausa
-        ld a,(vozOn)
-        or a
-        jr nz,LI_VOZ
+        exx                    ; C' = proxima linha; fala: HL' = amostras, DE' = restantes, B' = pausa
         ld a,c                 ; so o ruido lento: a cada 16 linhas
         add a,16
         cp 245
@@ -1355,8 +1348,13 @@ LI_FORA:
         ex af,af'
         ei
         ret
-; a fala: uma amostra a cada 2 linhas (0, 2, ... 244)
-LI_VOZ: ld a,c
+; a fala: uma amostra a cada 2 linhas (0, 2, ... 244). Vetor proprio e o
+; caminho mais curto possivel: com 3 escritas no PSG a rotina precisa acabar
+; bem antes da linha seguinte (o ruido lento fica parado enquanto ela fala)
+VozIsr: ex af,af'
+        in a,(VDPCTRL)         ; S#1: limpa o FH (so a interrupcao de linha esta ligada)
+        exx
+        ld a,c
         add a,2
         cp 246
         jr c,LV_1
@@ -1365,24 +1363,22 @@ LV_1:   ld c,a
         out (VDPCTRL),a
         ld a,19|0x80
         out (VDPCTRL),a
-        ld a,(bgOn)            ; o ruido lento junto, a cada 8 amostras
-        or a
-        jr z,LV_2
-        ld a,c
-        and 15
-        cp 4
-        call z,LiBang
 LV_2:   ld a,d
         or e
         jr z,LV_PROX
         dec de
         bit 7,b
         jr nz,LV_SAI           ; pausa: o volume fica
-        ld a,(hl)              ; indice do par de volumes (B, C)
+        ld a,(hl)              ; indice do trio de volumes (A, B, C)
         inc hl
         push hl
         ld l,a
         ld h,VZ_TB>>8
+        ld a,8
+        out (PSGADDR),a
+        ld a,(hl)
+        out (PSGDATA),a
+        inc h
         ld a,9
         out (PSGADDR),a
         ld a,(hl)
@@ -1435,6 +1431,10 @@ LV_C:   ld e,(hl)
 LV_FIM: xor a
         ld (vozOn),a
         call VzCala
+        push hl
+        ld hl,LinhaIsr
+        ld (IM2VEC+1),hl
+        pop hl
         ld a,(bgOn)
         or a
         jr nz,LV_SAI           ; o ruido lento segue sozinho
@@ -1468,6 +1468,9 @@ LB_N:   out (PSGDATA),a
 
 ; A = frase (VOZ_FR): comeca a falar. A interrupcao de linha toca
 VozFala:
+        push af
+        call BangOff           ; o canal A passa a ser da fala
+        pop af
         ld l,a
         ld h,0
         add hl,hl
@@ -1482,11 +1485,13 @@ VozFala:
         ld de,0                ; nada tocando: a 1a interrupcao pega o 1o alofone
         ld b,0
         exx
-        ld a,7                 ; mixer: tom e ruido B e C desligados
+        ld a,7                 ; mixer: tom e ruido dos tres canais desligados
         out (PSGADDR),a
         in a,(0xA2)
-        or 0x36
+        or 0x3F
         out (PSGDATA),a
+        ld hl,VozIsr
+        ld (IM2VEC+1),hl
         ld a,(vozOn)
         ld c,a
         ld a,1
@@ -1519,8 +1524,12 @@ VozFala:
 VF_FIM: ei
         ret
 
-; volumes B e C em 0 (a fala usa os dois canais somados)
-VzCala: ld a,9
+; volumes A, B e C em 0 (a fala usa os tres canais somados)
+VzCala: ld a,8
+        out (PSGADDR),a
+        xor a
+        out (PSGDATA),a
+        ld a,9
         out (PSGADDR),a
         xor a
         out (PSGDATA),a
@@ -1539,6 +1548,8 @@ VozPara:
         xor a
         ld (vozOn),a
         call VzCala
+        ld hl,LinhaIsr
+        ld (IM2VEC+1),hl
         ld a,(bgOn)
         or a
         jr nz,VP_FIM

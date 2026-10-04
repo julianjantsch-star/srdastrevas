@@ -6,11 +6,12 @@
 # uma das 11 primeiras). Aqui cada frase e sintetizada pelo nucleo do SP0256 do
 # MAME (sp0256.cpp, BSD-3) num programa avulso (sim.cpp), recortada em alofones
 # (cada um toca do aceite do seguinte ao aceite do outro), reamostrada de
-# 9286 Hz para a taxa do MSX e quantizada na soma dos volumes dos canais B e C
-# do PSG (1 byte por amostra). O MSX encadeia os alofones como o chip faz.
+# 9286 Hz para a taxa do MSX (com passa-baixa) e quantizada na soma dos volumes
+# dos tres canais do PSG (1 byte por amostra, indice num trio de volumes). O MSX encadeia os alofones como o chip faz.
 #
 # Uso: python3 tools/voz/gen_voz.py <sp0256.cpp do MAME> <voice.zip do The Voice>
 import sys, os, subprocess, zipfile, array, tempfile
+import numpy as np
 
 AQUI = os.path.dirname(os.path.abspath(__file__))
 SRC = os.path.join(AQUI, "..", "..", "src")
@@ -42,7 +43,24 @@ FRASES = [
 # volumes do PSG (AY-3-8910), normalizados
 # volumes do PSG do MSX (YM2149 / S1985): 3 dB por passo, 0 = mudo
 NIVEIS = [0.0] + [2 ** ((n - 15) / 2) for n in range(1, 16)]
-U0, GANHO = 0.4, 0.4                     # o silencio e a excursao (soma de B e C)
+U0, GANHO = 1.2, 1.4                     # o silencio e a excursao (soma de A, B e C)
+
+def poda(vals, u, k):
+  """tira valores da tabela ate sobrarem k, sempre o que menos aumenta o
+  erro quadratico das amostras u (as amostras dele vao para um vizinho)"""
+  v = np.array(vals, float)
+  while len(v) > k:
+    idx = np.abs(v[None, :] - u[:, None]).argmin(1)
+    err0 = (v[idx] - u) ** 2
+    cost = np.zeros(len(v))
+    for i in np.unique(idx):
+      m = idx == i; uu = u[m]
+      alt = np.min([(v[j] - uu) ** 2 for j in (i - 1, i + 1) if 0 <= j < len(v)], axis=0)
+      cost[i] = (alt - err0[m]).sum()
+    vazios = np.where(cost == 0)[0]
+    rm = vazios[:len(v) - k] if len(vazios) else [int(np.argmin(cost))]
+    v = np.delete(v, rm)
+  return v
 
 def main(sp_cpp, voice_zip):
   tmp = tempfile.mkdtemp()
@@ -68,38 +86,50 @@ def main(sp_cpp, voice_zip):
     for n in range(len(seq) - 2):
       cortes.setdefault(seq[n], a[ac[n + 1]:ac[n + 2]])
 
-  # dois canais (B e C) somados: cada amostra e um indice numa tabela de
-  # pares de volumes (os 16x16 pares dao ~140 niveis distintos). Ganho e
-  # centro escolhidos pela melhor correlacao com o som do chip (24 dB, contra
-  # 11 dB com um canal so)
-  todos = sorted(abs(x) for k, c in cortes.items() if k > 4 for x in c)
-  ref = todos[int(len(todos) * 0.995)] or 1
-  pares = sorted({(round(NIVEIS[b] + NIVEIS[c], 6), b, c) for b in range(16) for c in range(16)})
-  vistos, tab_par = set(), []
-  for v, b, c in pares:
-    if v not in vistos: vistos.add(v); tab_par.append((v, b, c))
-  def quant(x):
-    u = U0 + x / ref * GANHO
-    return min(range(len(tab_par)), key=lambda i: abs(tab_par[i][0] - u))
-  def ream(c):
+  # tres canais (A, B e C) somados: o som do console espera a frase, entao
+  # os tres sao da fala. Dos 608 niveis possiveis ficam os 256 que menos
+  # pioram o erro na distribuicao real das amostras (cada amostra e um byte,
+  # indice numa tabela de trios de volumes). Centro e ganho medidos contra a gravacao do MAME: ganho alto tira o chiado
+  # dos trechos baixos; 1,4 ainda nao corta os picos das vogais.
+  todos = np.concatenate([np.array(c, float) for k, c in cortes.items() if k > 4])
+  ref = np.sort(np.abs(todos))[int(len(todos) * 0.995)] or 1
+  Nv = np.array(NIVEIS)
+  trios = {}
+  for a_ in range(16):
+    for b_ in range(16):
+      for c_ in range(16):
+        v = round(Nv[a_] + Nv[b_] + Nv[c_], 6)
+        if v not in trios or max(a_, b_, c_) < max(trios[v]): trios[v] = (a_, b_, c_)
+  vals = np.array(sorted(trios))
+  u_all = U0 + todos[::7] / ref * GANHO
+  vals = poda(vals, u_all, 256)
+  tab_par = [(v,) + trios[round(float(v), 6)] for v in vals]
+  def quant_arr(x):
+    u = U0 + np.asarray(x) / ref * GANHO
+    return np.abs(vals[None, :] - u[:, None]).argmin(1)
+  # passa-baixa (sinc com janela, 3,4 kHz) e interpolacao para a taxa do MSX
+  h = np.sinc(2 * 3400 / F_CHIP * (np.arange(63) - 31)) * np.hamming(63)
+  h /= h.sum()
+  # nas chiadas (S, SH, F, TH, T, K, P, CH, H...) o chiado mora acima da faixa
+  # do MSX: sem filtro ele se dobra para dentro dela e o "s" continua se ouvindo
+  CHIADAS = {"SS", "SH", "ZH", "ZZ", "FF", "TH", "HH1", "HH2", "CH", "JH",
+             "TT1", "TT2", "KK1", "KK2", "KK3", "PP"}
+  def ream(c, chiada=False):
+    c = np.asarray(c, float)
+    if not chiada: c = np.convolve(c, h, "same")
     n = int(len(c) * F_MSX / F_CHIP)
-    out = []
-    for i in range(n):
-      p = i * F_CHIP / F_MSX; j = int(p); f = p - j
-      a0 = c[j] if j < len(c) else 0; a1 = c[j + 1] if j + 1 < len(c) else a0
-      out.append(a0 + (a1 - a0) * f)
-    return out
+    return np.interp(np.arange(n) * F_CHIP / F_MSX, np.arange(len(c)), c)
 
   codigos = sorted(cortes)
   tab, dados, banco, pos = [], [bytearray()], BANCO0, 0
   for k in codigos:
-    c = ream(cortes[k])
+    c = ream(cortes[k], k < 64 and AL[k] in CHIADAS)
     n = len(c)
     if k <= 4:                                       # pausa: so a duracao
       tab.append((k, 0xFF, 0, n)); continue
     if pos + n > 0x2000:
       dados.append(bytearray()); banco += 1; pos = 0
-    dados[-1] += bytes(quant(x) for x in c[:n])
+    dados[-1] += bytes(int(v) for v in quant_arr(c[:n]))
     tab.append((k, banco, 0xA000 + pos, n))
     pos += n
   bin_ = b"".join(bytes(d) + bytes(0x2000 - len(d)) for d in dados)
@@ -108,11 +138,12 @@ def main(sp_cpp, voice_zip):
   idx = {k: i for i, (k, *_) in enumerate(tab)}
   o = ["; gerado por tools/voz/gen_voz.py: a fala do original (The Voice / SP0256) em alofones",
        "VOZ_BANCOS equ %d          ; bancos de 8 KB a partir do %d" % (len(dados), BANCO0),
-       "VOZ_NPAR equ %d          ; pares de volume (B, C)" % len(tab_par),
+       "VOZ_NPAR equ %d          ; trios de volume (A, B, C)" % len(tab_par),
        "VOZ_NFR equ %d" % len(FRASES),
-       "; amostra = indice do par: volume B em VOZ_PB, volume C em VOZ_PC (copiados para a RAM)",
-       "VOZ_PB: db " + ",".join(str(b) for v, b, c in tab_par),
-       "VOZ_PC: db " + ",".join(str(c) for v, b, c in tab_par),
+       "; amostra = indice do trio: volumes A, B e C em VOZ_PA/PB/PC (copiados para a RAM)",
+       "VOZ_PA: db " + ",".join(str(a) for v, a, b, c in tab_par),
+       "VOZ_PB: db " + ",".join(str(b) for v, a, b, c in tab_par),
+       "VOZ_PC: db " + ",".join(str(c) for v, a, b, c in tab_par),
        "; alofone: banco (0xFF = pausa), endereco em 0xA000-0xBFFF, amostras (1 por byte)",
        "VOZ_TAB:"]
   for k, b, ad, n in tab:
