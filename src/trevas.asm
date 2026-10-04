@@ -2,7 +2,7 @@
 ;  S E N H O R   D A S   T R E V A S   -   MSX2+
 ;  Recriacao do Senhor das Trevas! (Philips Odyssey, 1983) / Attack of
 ;  the Timelord! (Magnavox Odyssey2, 1982, Ed Averett)
-;  SCREEN 5 (G4 - 256x212, 16 cores), MegaROM ASCII8 de 64 KB: bancos 0-2
+;  SCREEN 5 (G4 - 256x212, 16 cores), MegaROM ASCII8 de 128 KB: bancos 0-2
 ;  fixos em 0x4000-0x9FFF (codigo), bancos 3.. em 0xA000-0xBFFF (a fala)
 ;
 ;  Abertura, fonte, paleta, motor de som, teclado e calibragem vem do
@@ -20,7 +20,8 @@ PPIB    equ 0xA9
 
 STACK   equ 0xF000
 IM2TAB  equ 0xD000        ; tabela de vetores do IM 2 (257 bytes iguais a IM2VEC>>8)
-IM2VEC  equ 0xD1D1        ; para onde a tabela manda: jp BangIsr
+IM2VEC  equ 0xD1D1
+VZ_TB   equ 0xD400        ; fala: volume B do par n em VZ_TB+n, volume C em VZ_TB+256+n        ; para onde a tabela manda: jp BangIsr
 SCRW    equ 256
 SCRH    equ 212
 
@@ -95,6 +96,14 @@ INIT:
         ld de,0xC001
         ld bc,RAM_FIM-0xC000-1
         ld (hl),0
+        ldir
+        ld hl,VOZ_PB           ; pares de volume da fala na RAM (alinhados em 256)
+        ld de,VZ_TB
+        ld bc,VOZ_NPAR
+        ldir
+        ld hl,VOZ_PC
+        ld de,VZ_TB+256
+        ld bc,VOZ_NPAR
         ldir
         ; IM 2: tabela de 257 bytes iguais (o barramento do MSX flutua no
         ; reconhecimento) -> vetor IM2VEC = jp BangIsr (50_sons)
@@ -217,24 +226,27 @@ PsgData:
         db 0,0, 0,0, 0,0, 0, 0xB8, 0,0,0, 0,0, 0
 
 ; A = registrador, E = valor
-; PsgWr para os passos de som: enquanto a fala toca, o volume B (9) e dela
-; e o mixer fica com o tom e o ruido B desligados
+; PsgWr para os passos de som: enquanto a fala toca, os volumes B e C (9, 10)
+; sao dela e o mixer fica com o tom e o ruido B e C desligados
 PsgWrS:
         cp 7
         jr z,PWS_M
         cp 9
-        jr nz,PsgWr
+        jr c,PsgWr
+        cp 11
+        jr nc,PsgWr
+        ld c,a                 ; 9 ou 10: da fala enquanto ela toca
         ld a,(vozOn)
         or a
         ret nz
-        ld a,9
+        ld a,c
         jr PsgWr
 PWS_M:  ld a,(vozOn)
         or a
         ld a,7
         jr z,PsgWr
         ld a,e
-        or 0x12
+        or 0x36
         ld e,a
         ld a,7
 PsgWr:
@@ -1228,7 +1240,16 @@ SndSilence:
         jp PsgWr
 
 SfxTick:
-        ld hl,(sfxPtr)
+        ld a,(vozOn)           ; como no Odyssey com o The Voice: o som do
+        or a                   ; console espera a frase acabar
+        jr z,ST_0
+        ld a,(bgOn)
+        or a
+        call nz,BangOff
+        ld e,0
+        ld a,8
+        jp PsgWr
+ST_0:   ld hl,(sfxPtr)
         ld a,h
         or l
         ret z
@@ -1357,21 +1378,21 @@ LV_2:   ld a,d
         dec de
         bit 7,b
         jr nz,LV_SAI           ; pausa: o volume fica
+        ld a,(hl)              ; indice do par de volumes (B, C)
+        inc hl
+        push hl
+        ld l,a
+        ld h,VZ_TB>>8
         ld a,9
         out (PSGADDR),a
-        ld a,b
-        xor 1                  ; 1 = nibble alto agora, 0 = o baixo (e avanca)
-        ld b,a
         ld a,(hl)
-        jr z,LV_LO
-        rrca
-        rrca
-        rrca
-        rrca
-        jr LV_OUT
-LV_LO:  inc hl
-LV_OUT: and 15
         out (PSGDATA),a
+        inc h
+        ld a,10
+        out (PSGADDR),a
+        ld a,(hl)
+        out (PSGDATA),a
+        pop hl
 LV_SAI: exx
         ex af,af'
         ei
@@ -1413,10 +1434,7 @@ LV_C:   ld e,(hl)
         jr LV_SAI
 LV_FIM: xor a
         ld (vozOn),a
-        ld a,9
-        out (PSGADDR),a
-        xor a
-        out (PSGDATA),a
+        call VzCala
         ld a,(bgOn)
         or a
         jr nz,LV_SAI           ; o ruido lento segue sozinho
@@ -1464,10 +1482,10 @@ VozFala:
         ld de,0                ; nada tocando: a 1a interrupcao pega o 1o alofone
         ld b,0
         exx
-        ld a,7                 ; mixer: tom e ruido B desligados
+        ld a,7                 ; mixer: tom e ruido B e C desligados
         out (PSGADDR),a
         in a,(0xA2)
-        or 0x12
+        or 0x36
         out (PSGDATA),a
         ld a,(vozOn)
         ld c,a
@@ -1501,6 +1519,17 @@ VozFala:
 VF_FIM: ei
         ret
 
+; volumes B e C em 0 (a fala usa os dois canais somados)
+VzCala: ld a,9
+        out (PSGADDR),a
+        xor a
+        out (PSGDATA),a
+        ld a,10
+        out (PSGADDR),a
+        xor a
+        out (PSGDATA),a
+        ret
+
 ; cala a fala (o ruido lento, se tocando, continua)
 VozPara:
         di
@@ -1509,10 +1538,7 @@ VozPara:
         jr z,VP_FIM
         xor a
         ld (vozOn),a
-        ld a,9
-        out (PSGADDR),a
-        xor a
-        out (PSGDATA),a
+        call VzCala
         ld a,(bgOn)
         or a
         jr nz,VP_FIM

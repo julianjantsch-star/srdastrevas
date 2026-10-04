@@ -25,6 +25,8 @@ SH_XMIN   equ 6                ; a fila nunca sai deste retangulo (medido)
 SH_XMAX   equ 148
 SH_YMIN   equ 18
 SH_YMAX   equ 150
+SH_XMEIO  equ 77
+SH_YMEIO  equ 84
 SH_PASSO  equ 14               ; o lider decide a direcao a cada 14 unidades
 SH_GAP    equ 10               ; cada nave anda 10 unidades atras da anterior
 NSHIP     equ 8
@@ -591,26 +593,31 @@ DE_2:   ld a,(filaNasc)
         cp SH_PASSO
         jr nc,DE_3
         ld c,0
-DE_3:   ld b,3                 ; tenta ate 3 vezes ficar dentro
-DE_T:   ld a,(shDir)
-        add a,c
+DE_3:   ld a,c                 ; a preferida (sorteada) primeiro
+        call DE_TENTA
+        jr nc,DE_OK
+        ld hl,DE_OUTRAS        ; depois as outras 7, das mais suaves as mais fechadas
+        ld b,7
+DE_T:   ld a,(hl)
+        inc hl
+        push hl
+        call DE_TENTA
+        pop hl
+        jr nc,DE_OK
+        djnz DE_T
+        ; nenhuma cabe (canto): vai para o centro do retangulo
+        call ParaCentro
+        ld (shTenta),a
+        jr DE_OK
+DE_OUTRAS: db 1, -1, 2, -2, 3, -3, 4
+; A = desvio da direcao atual -> (shTenta) e NC se o trecho cabe
+DE_TENTA:
+        ld e,a
+        ld a,(shDir)
+        add a,e
         and 7
         ld (shTenta),a
-        call Cabe
-        jr nc,DE_OK
-        ; nao cabe: vira para o outro lado
-        ld a,c
-        or a
-        jr nz,DE_4
-        ld c,1
-        jr DE_5
-DE_4:   neg
-        ld c,a
-        ld a,b
-        cp 2
-        jr nz,DE_5
-        sla c                  ; meia volta
-DE_5:   djnz DE_T
+        jp Cabe
 DE_OK:  ld a,(shTenta)
         ld (shDir),a
         ld e,a
@@ -656,6 +663,29 @@ CB_Y:   add a,e
         or a
         ret
 CB_NAO: scf
+        ret
+
+; direcao (0..7, leste = 0, horario) do lider para o centro do retangulo
+ParaCentro:
+        ld a,(shX)
+        ld c,1                 ; dx: +1 (vai para a direita)
+        cp SH_XMEIO
+        jr c,PC_1
+        ld c,-1
+PC_1:   ld a,(shY)
+        cp SH_YMEIO
+        ld a,c
+        jr c,PC_BX             ; acima do centro: desce
+        ; sobe: nordeste (7) ou noroeste (5)
+        cp 1
+        ld a,7
+        ret z
+        ld a,5
+        ret
+PC_BX:  cp 1                   ; desce: sudeste (1) ou sudoeste (3)
+        ld a,1
+        ret z
+        ld a,3
         ret
 
 ; 16 direcoes (leste = 0, sentido horario): dx, dy por unidade de rastro

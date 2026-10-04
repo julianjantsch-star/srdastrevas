@@ -37,7 +37,7 @@ for (const l of asm.assembledLines) {
 fs.writeFileSync(LST, lines.join("\n") + "\n");
 
 // MegaROM ASCII8: bancos 0-2 (0x4000-0x9FFF) = codigo; 3.. = a fala (src/voz.bin)
-const ROM_BASE = 0x4000, ROM_SIZE = 0x6000, ROM_TOTAL = 0x10000;
+const ROM_BASE = 0x4000, ROM_SIZE = 0x6000, ROM_TOTAL = 0x20000;
 const rom = Buffer.alloc(ROM_SIZE, 0);
 let maxAddr = ROM_BASE, overflow = false;
 for (const l of asm.assembledLines) {

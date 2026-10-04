@@ -35,9 +35,10 @@ ok(rd("plVivo") === 1, "o canhao chegou");
 
 // robo: fica sob a nave mais baixa e atira; desvia do que cai perto
 let quadros = 0, nivelMax = 1, mortes = 0, tipos = new Set(), pontosMax = 0, recorde0 = rd16("recorde");
-let estAnt = rd("estado"), fotoNivel = false;
+let estAnt = rd("estado"), fotoNivel = false, yMax = 0;
 while (quadros < 60 * 60 * 6 && (nivelMax < 4 || mortes < 1)) {
   const px = rd("plX") + 8, ns = naves(), ws = armas();
+  if (rd("estado") !== 2) for (const n of ns) if (n.y > yMax && n.y < 240) yMax = n.y;
   for (const w of ws) tipos.add(w.t);
   let alvo = ns.length ? ns.reduce((a, b) => (b.y > a.y ? b : a)).x + 4 : 77;
   let foge = 0;
@@ -53,6 +54,7 @@ while (quadros < 60 * 60 * 6 && (nivelMax < 4 || mortes < 1)) {
 }
 m.key("LEFT", false); m.key("RIGHT", false); m.key("SPACE", false);
 console.log("  armas vistas", [...tipos].sort().join(","), "mortes", mortes, "nivel max", nivelMax);
+ok(yMax <= 152, "a fila fica no retangulo medido (y <= 150): y maximo " + yMax);
 ok(pontosMax >= 5, "fez pontos: " + pontosMax);
 ok(nivelMax >= 2, "passou de nivel: " + nivelMax);
 ok(tipos.has(1), "misseis no nivel 1");

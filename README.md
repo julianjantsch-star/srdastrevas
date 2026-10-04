@@ -1,6 +1,6 @@
 # Senhor das Trevas — MSX2+
 
-Recriação de *Senhor das Trevas!* (Philips Odyssey, 1983 = *Attack of the Timelord!*, Magnavox 1982) para MSX2+, numa MegaROM ASCII8 de 64 KB (código nos bancos 0–2, a fala nos bancos 3–5). A abertura é a mesma do OVNI (ON → SELECT GAME).
+Recriação de *Senhor das Trevas!* (Philips Odyssey, 1983 = *Attack of the Timelord!*, Magnavox 1982) para MSX2+, numa MegaROM ASCII8 de 128 KB (código nos bancos 0–2, a fala nos bancos 3–8). A abertura é a mesma do OVNI (ON → SELECT GAME).
 
 O **Senhor das Trevas fala**, como no Odyssey com o módulo *The Voice* (o mesmo que o Odyssey Vault liga): a cada abertura ele sorteia uma das 11 frases do cartucho ("Prepare for defeat", "Seize the planet", "The earth will be mine"…) e o rosto fica na tela até a frase acabar; ao limpar um nível, ele elogia ("A commendable defense", "Not bad, human", "You are a worthy opponent").
 
@@ -34,7 +34,7 @@ npm test           # bateria nos dois modos (robô que mira) + teste de tempo
 
 ## A fala
 
-O cartucho original manda **alofones** ao SP0256B-019 do The Voice (as 14 frases estão em `o2_45.bin`, 0x105–0x21F, terminadas por 0x01). `tools/voz/gen_voz.py` compila o núcleo do SP0256 do MAME (`sp0256.cpp`) num programa avulso, sintetiza cada frase a 9286 Hz (cristal de 3,12 MHz ÷ 336), recorta os alofones pelo instante em que o chip aceita o seguinte, reamostra para 7373 Hz e quantiza nos 16 volumes do PSG. No MSX, a interrupção de linha do V9938 a cada 2 linhas (linhas 0–244: 123 amostras por quadro) toca uma amostra no volume do canal B (tom e ruído B desligados), troca o banco ASCII8 a cada alofone e, junto, continua o ruído lento do canal A a cada 16 linhas. No openMSX o envelope gravado do canal B bate 0,975 com o esperado.
+O cartucho original manda **alofones** ao SP0256B-019 do The Voice (as 14 frases estão em `o2_45.bin`, 0x105–0x21F, terminadas por 0x01). `tools/voz/gen_voz.py` compila o núcleo do SP0256 do MAME (`sp0256.cpp`) num programa avulso, sintetiza cada frase a 9286 Hz (cristal de 3,12 MHz ÷ 336), recorta os alofones pelo instante em que o chip aceita o seguinte, reamostra para 7373 Hz e quantiza na soma dos volumes dos canais B e C do PSG (passos de 3 dB, 135 níveis; 1 byte por amostra, índice numa tabela de pares). No MSX, a interrupção de linha do V9938 a cada 2 linhas (linhas 0–244: 123 amostras por quadro) põe o par de volumes nos canais B e C (tom e ruído desligados); como no Odyssey com o The Voice, o som do console espera a frase acabar, troca o banco ASCII8 a cada alofone e, junto, continua o ruído lento do canal A a cada 16 linhas. No openMSX a saída bate com o esperado e o espectrograma fica a 0,82 do som do MAME com o The Voice.
 
 ## Arquivos
 
@@ -45,6 +45,6 @@ O cartucho original manda **alofones** ao SP0256B-019 do The Voice (as 14 frases
 | `src/o2.asm` | modo 0: leva a cópia do i8244 para o SCREEN 5 |
 | `src/o2m.asm` | modo 1: leva a mesma cópia para o SCREEN 8 |
 | `src/o2dados.inc` | gerado: figuras, abertura, morte, estouro, sons |
-| `src/voz.inc`, `src/voz.bin` | gerados: os 45 alofones do SP0256 (4 bits, 7373 Hz) e as 14 frases |
+| `src/voz.inc`, `src/voz.bin` | gerados: os 45 alofones do SP0256 (pares de volume B+C, 7373 Hz) e as 14 frases |
 | `tools/voz/` | `gen_voz.py` + `sim.cpp`: sintetiza as frases com o núcleo do SP0256 do MAME e recorta os alofones |
 | `ref/MEDIDAS.md` | tudo o que foi medido no original |

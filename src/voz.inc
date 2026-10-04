@@ -1,99 +1,102 @@
 ; gerado por tools/voz/gen_voz.py: a fala do original (The Voice / SP0256) em alofones
-VOZ_BANCOS equ 3          ; bancos de 8 KB a partir do 3
-VOZ_CENTRO equ 11          ; volume do PSG do silencio
+VOZ_BANCOS equ 6          ; bancos de 8 KB a partir do 3
+VOZ_NPAR equ 123          ; pares de volume (B, C)
 VOZ_NFR equ 14
-; alofone: banco (0xFF = pausa), endereco em 0xA000-0xBFFF, amostras (2 por byte)
+; amostra = indice do par: volume B em VOZ_PB, volume C em VOZ_PC (copiados para a RAM)
+VOZ_PB: db 0,0,0,0,1,0,1,2,1,0,2,3,1,2,0,3,1,4,2,3,0,4,1,2,5,3,4,0,5,1,2,3,6,4,5,0,6,1,2,3,4,7,5,6,0,1,7,2,3,4,5,8,6,7,0,1,2,8,3,4,5,6,9,7,8,0,1,2,3,9,4,5,6,7,10,8,9,0,1,2,3,4,10,5,6,7,8,11,9,10,0,1,2,3,4,5,11,6,7,8,9,12,10,11,0,1,2,3,4,5,6,12,7,8,9,10,13,11,12,14,13,14,15
+VOZ_PC: db 0,1,2,3,2,4,3,3,4,5,4,4,5,5,6,5,6,5,6,6,7,6,7,7,6,7,7,8,7,8,8,8,7,8,8,9,8,9,9,9,9,8,9,9,10,10,9,10,10,10,10,9,10,10,11,11,11,10,11,11,11,11,10,11,11,12,12,12,12,11,12,12,12,12,11,12,12,13,13,13,13,13,12,13,13,13,13,12,13,13,14,14,14,14,14,14,13,14,14,14,14,13,14,14,15,15,15,15,15,15,15,14,15,15,15,15,14,15,15,14,15,15,15
+; alofone: banco (0xFF = pausa), endereco em 0xA000-0xBFFF, amostras (1 por byte)
 VOZ_TAB:
   db 0xff
-  dw 0x0000, 360     ; PA3
+  dw 0x0000, 361     ; PA3
   db 0xff
   dw 0x0000, 774     ; PA4
   db 0xff
-  dw 0x0000, 1598     ; PA5
+  dw 0x0000, 1599     ; PA5
   db 0x03
   dw 0xa000, 2702     ; OY
   db 0x03
-  dw 0xa547, 1606     ; AY
+  dw 0xaa8e, 1607     ; AY
   db 0x03
-  dw 0xa86a, 510     ; EH
+  dw 0xb0d5, 511     ; EH
   db 0x03
-  dw 0xa969, 766     ; KK3
+  dw 0xb2d4, 766     ; KK3
   db 0x03
-  dw 0xaae8, 1332     ; PP
+  dw 0xb5d2, 1333     ; PP
   db 0x03
-  dw 0xad82, 876     ; NN1
-  db 0x03
-  dw 0xaf38, 438     ; IH
-  db 0x03
-  dw 0xb013, 918     ; TT2
-  db 0x03
-  dw 0xb1de, 1168     ; RR1
-  db 0x03
-  dw 0xb426, 510     ; AX
-  db 0x03
-  dw 0xb525, 1168     ; MM
-  db 0x03
-  dw 0xb76d, 614     ; TT1
-  db 0x03
-  dw 0xb8a0, 1606     ; IY
-  db 0x03
-  dw 0xbbc3, 438     ; DD1
-  db 0x03
-  dw 0xbc9e, 656     ; UW1
-  db 0x03
-  dw 0xbde6, 656     ; AA
+  dw 0xbb07, 876     ; NN1
   db 0x04
+  dw 0xa000, 438     ; IH
+  db 0x04
+  dw 0xa1b6, 919     ; TT2
+  db 0x04
+  dw 0xa54d, 1168     ; RR1
+  db 0x04
+  dw 0xa9dd, 511     ; AX
+  db 0x04
+  dw 0xabdc, 1168     ; MM
+  db 0x04
+  dw 0xb06c, 614     ; TT1
+  db 0x04
+  dw 0xb2d2, 1607     ; IY
+  db 0x04
+  dw 0xb919, 438     ; DD1
+  db 0x04
+  dw 0xbacf, 657     ; UW1
+  db 0x04
+  dw 0xbd60, 657     ; AA
+  db 0x05
   dw 0xa000, 1168     ; YY2
-  db 0x04
-  dw 0xa248, 730     ; AE
-  db 0x04
-  dw 0xa3b5, 812     ; HH1
-  db 0x04
-  dw 0xa54b, 292     ; BB1
-  db 0x04
-  dw 0xa5dd, 1116     ; TH
-  db 0x04
-  dw 0xa80b, 656     ; UH
-  db 0x04
-  dw 0xa953, 1606     ; UW2
-  db 0x04
-  dw 0xac76, 1072     ; DD2
-  db 0x04
-  dw 0xae8e, 720     ; GG3
-  db 0x04
-  dw 0xaff6, 730     ; RR2
-  db 0x04
-  dw 0xb163, 964     ; FF
-  db 0x04
-  dw 0xb345, 1022     ; KK1
-  db 0x04
-  dw 0xb544, 1384     ; ZZ
-  db 0x04
-  dw 0xb7f8, 1386     ; NG
-  db 0x04
-  dw 0xbaad, 876     ; LL
-  db 0x04
-  dw 0xbc63, 1168     ; WW
   db 0x05
+  dw 0xa490, 730     ; AE
+  db 0x05
+  dw 0xa76a, 813     ; HH1
+  db 0x05
+  dw 0xaa97, 292     ; BB1
+  db 0x05
+  dw 0xabbb, 1117     ; TH
+  db 0x05
+  dw 0xb018, 657     ; UH
+  db 0x05
+  dw 0xb2a9, 1607     ; UW2
+  db 0x05
+  dw 0xb8f0, 1073     ; DD2
+  db 0x05
+  dw 0xbd21, 720     ; GG3
+  db 0x06
+  dw 0xa000, 730     ; RR2
+  db 0x06
+  dw 0xa2da, 965     ; FF
+  db 0x06
+  dw 0xa69f, 1022     ; KK1
+  db 0x06
+  dw 0xaa9d, 1384     ; ZZ
+  db 0x06
+  dw 0xb005, 1387     ; NG
+  db 0x06
+  dw 0xb570, 876     ; LL
+  db 0x06
+  dw 0xb8dc, 1168     ; WW
+  db 0x07
   dw 0xa000, 2264     ; XR
-  db 0x05
-  dw 0xa46c, 876     ; ER1
-  db 0x05
-  dw 0xa622, 1898     ; ER2
-  db 0x05
-  dw 0xa9d7, 1606     ; OW
-  db 0x05
-  dw 0xacfa, 1680     ; DH2
-  db 0x05
-  dw 0xb042, 558     ; SS
-  db 0x05
-  dw 0xb159, 1206     ; HH2
-  db 0x05
-  dw 0xb3b4, 2118     ; OR
-  db 0x05
-  dw 0xb7d7, 454     ; BB2
-  db 0x05
-  dw 0xb8ba, 50     ; 0x64
+  db 0x07
+  dw 0xa8d8, 876     ; ER1
+  db 0x07
+  dw 0xac44, 1899     ; ER2
+  db 0x07
+  dw 0xb3af, 1607     ; OW
+  db 0x08
+  dw 0xa000, 1680     ; DH2
+  db 0x08
+  dw 0xa690, 558     ; SS
+  db 0x08
+  dw 0xa8be, 1206     ; HH2
+  db 0x08
+  dw 0xad74, 2118     ; OR
+  db 0x08
+  dw 0xb5ba, 454     ; BB2
+  db 0x08
+  dw 0xb780, 50     ; 0x64
 VOZ_FR:
   dw VOZ_F0
   dw VOZ_F1

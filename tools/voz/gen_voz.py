@@ -6,8 +6,8 @@
 # uma das 11 primeiras). Aqui cada frase e sintetizada pelo nucleo do SP0256 do
 # MAME (sp0256.cpp, BSD-3) num programa avulso (sim.cpp), recortada em alofones
 # (cada um toca do aceite do seguinte ao aceite do outro), reamostrada de
-# 9286 Hz para a taxa do MSX e quantizada nos 16 volumes do PSG (4 bits, 2 por
-# byte). O MSX encadeia os alofones como o chip faz.
+# 9286 Hz para a taxa do MSX e quantizada na soma dos volumes dos canais B e C
+# do PSG (1 byte por amostra). O MSX encadeia os alofones como o chip faz.
 #
 # Uso: python3 tools/voz/gen_voz.py <sp0256.cpp do MAME> <voice.zip do The Voice>
 import sys, os, subprocess, zipfile, array, tempfile
@@ -40,10 +40,9 @@ FRASES = [
   ("YOU ARE A WORTHY OPPONENT", "19 3a 02 07 13 02 2e 34 36 13 03 0f 11 11 35 0b 0c 0b 11"),
 ]
 # volumes do PSG (AY-3-8910), normalizados
-NIVEIS = [0.0, 0.0106, 0.0150, 0.0222, 0.0320, 0.0466, 0.0665, 0.1039, 0.1237, 0.1986,
-          0.2803, 0.3548, 0.4702, 0.6030, 0.7530, 1.0]
-U0 = 0.36                                # o silencio (meio da excursao)
-CENTRO = min(range(16), key=lambda i: abs(NIVEIS[i] - U0))
+# volumes do PSG do MSX (YM2149 / S1985): 3 dB por passo, 0 = mudo
+NIVEIS = [0.0] + [2 ** ((n - 15) / 2) for n in range(1, 16)]
+U0, GANHO = 0.4, 0.4                     # o silencio e a excursao (soma de B e C)
 
 def main(sp_cpp, voice_zip):
   tmp = tempfile.mkdtemp()
@@ -69,14 +68,19 @@ def main(sp_cpp, voice_zip):
     for n in range(len(seq) - 2):
       cortes.setdefault(seq[n], a[ac[n + 1]:ac[n + 2]])
 
-  # ganho: o percentil 99,5 da amplitude chega a +-0,6 em volta de 0,36 (os
-  # picos cortam); escolhido pela melhor correlacao com o som do chip (11 dB)
-  # (os picos raros cortam); os volumes do PSG sao logaritmicos
+  # dois canais (B e C) somados: cada amostra e um indice numa tabela de
+  # pares de volumes (os 16x16 pares dao ~140 niveis distintos). Ganho e
+  # centro escolhidos pela melhor correlacao com o som do chip (24 dB, contra
+  # 11 dB com um canal so)
   todos = sorted(abs(x) for k, c in cortes.items() if k > 4 for x in c)
   ref = todos[int(len(todos) * 0.995)] or 1
+  pares = sorted({(round(NIVEIS[b] + NIVEIS[c], 6), b, c) for b in range(16) for c in range(16)})
+  vistos, tab_par = set(), []
+  for v, b, c in pares:
+    if v not in vistos: vistos.add(v); tab_par.append((v, b, c))
   def quant(x):
-    u = U0 + x / ref * 0.6
-    return min(range(16), key=lambda i: abs(NIVEIS[i] - u))
+    u = U0 + x / ref * GANHO
+    return min(range(len(tab_par)), key=lambda i: abs(tab_par[i][0] - u))
   def ream(c):
     n = int(len(c) * F_MSX / F_CHIP)
     out = []
@@ -90,25 +94,26 @@ def main(sp_cpp, voice_zip):
   tab, dados, banco, pos = [], [bytearray()], BANCO0, 0
   for k in codigos:
     c = ream(cortes[k])
-    n = len(c) & ~1
+    n = len(c)
     if k <= 4:                                       # pausa: so a duracao
       tab.append((k, 0xFF, 0, n)); continue
-    nb = n // 2
-    if pos + nb > 0x2000:
+    if pos + n > 0x2000:
       dados.append(bytearray()); banco += 1; pos = 0
-    q = [quant(x) for x in c[:n]]
-    dados[-1] += bytes((q[i] << 4) | q[i + 1] for i in range(0, n, 2))
+    dados[-1] += bytes(quant(x) for x in c[:n])
     tab.append((k, banco, 0xA000 + pos, n))
-    pos += nb
+    pos += n
   bin_ = b"".join(bytes(d) + bytes(0x2000 - len(d)) for d in dados)
   open(os.path.join(SRC, "voz.bin"), "wb").write(bin_)
 
   idx = {k: i for i, (k, *_) in enumerate(tab)}
   o = ["; gerado por tools/voz/gen_voz.py: a fala do original (The Voice / SP0256) em alofones",
        "VOZ_BANCOS equ %d          ; bancos de 8 KB a partir do %d" % (len(dados), BANCO0),
-       "VOZ_CENTRO equ %d          ; volume do PSG do silencio" % CENTRO,
+       "VOZ_NPAR equ %d          ; pares de volume (B, C)" % len(tab_par),
        "VOZ_NFR equ %d" % len(FRASES),
-       "; alofone: banco (0xFF = pausa), endereco em 0xA000-0xBFFF, amostras (2 por byte)",
+       "; amostra = indice do par: volume B em VOZ_PB, volume C em VOZ_PC (copiados para a RAM)",
+       "VOZ_PB: db " + ",".join(str(b) for v, b, c in tab_par),
+       "VOZ_PC: db " + ",".join(str(c) for v, b, c in tab_par),
+       "; alofone: banco (0xFF = pausa), endereco em 0xA000-0xBFFF, amostras (1 por byte)",
        "VOZ_TAB:"]
   for k, b, ad, n in tab:
     o.append("  db 0x%02x\n  dw 0x%04x, %d     ; %s" % (b, ad, n, AL[k] if k < 64 else "0x%02x" % k))
