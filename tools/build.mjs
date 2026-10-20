@@ -80,9 +80,12 @@ fs.writeFileSync(SYM, syms.map(s => s[1].toString(16).padStart(4, "0") + " " + s
 
 const VOZ = path.join(ROOT, "src", "voz.bin");
 const voz = fs.existsSync(VOZ) ? fs.readFileSync(VOZ) : Buffer.alloc(0);
-if (ROM_SIZE + voz.length > ROM_TOTAL) { console.error("A fala nao cabe na MegaROM."); process.exit(1); }
+// os fundos do Videopac+ vem logo depois da fala (src/fundo.inc diz o banco)
+const FUNDO = path.join(ROOT, "src", "fundo.bin");
+const fundo = fs.existsSync(FUNDO) ? fs.readFileSync(FUNDO) : Buffer.alloc(0);
+if (ROM_SIZE + voz.length + fundo.length > ROM_TOTAL) { console.error("A fala nao cabe na MegaROM."); process.exit(1); }
 const total = Buffer.alloc(ROM_TOTAL, 0xff);
-rom.copy(total, 0); voz.copy(total, ROM_SIZE);
+rom.copy(total, 0); voz.copy(total, ROM_SIZE); fundo.copy(total, ROM_SIZE + voz.length);
 fs.writeFileSync(OUT, total);
 const used = maxAddr - ROM_BASE;
 console.log("OK  ROM: " + OUT);

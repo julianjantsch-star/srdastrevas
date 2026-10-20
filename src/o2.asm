@@ -71,6 +71,9 @@ O2Passo:
 O2Init:
         call O2Prepara
         call ClearScreen
+        ld a,(fundoVP)
+        or a
+        call nz,Fundo5Init
         di
         ld a,0x42              ; R1: tela ligada, sprites 16x16
         out (VDPCTRL),a
@@ -550,7 +553,7 @@ OD_CHG: call OD_Erase
         ld (c_ny),hl
         ld a,(odW)
         cp 24                  ; ampliada: o fundo preto da celula nao cobre o placar
-        call nz,CmdBlit
+        call nz,CmdBlitC
         ld a,(odW)
         cp 24
         call z,CmdBlitT
@@ -603,6 +606,9 @@ OE_1:
         ld a,(iy+4)
         ld l,a
         ld (c_ny),hl
+        ld a,(fundoVP)         ; com o fundo do Videopac+: copia o fundo de volta
+        or a
+        jp nz,FdApaga
         xor a
         jp CmdFillB
 

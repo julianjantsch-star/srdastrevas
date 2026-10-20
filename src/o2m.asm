@@ -18,7 +18,7 @@ C8_Y      equ 256              ; celulas: figura f, cor c em (16c, 256 + 16f)
 NAVE8_Y   equ 256+16*CF_N      ; a nave nova, cor c em (16c, NAVE8_Y)
 CANH8_Y   equ NAVE8_Y+16       ; a piramide (24 x 14) em (CANH8_M, CANH8_Y)
 CANH8_M   equ 16               ; margem preta: a copia ja apaga onde ela estava
-HUD8_Y    equ 384              ; placar: n = 3g + k em (16*(n&15), 384 + 16*(n>>4))
+HUD8_Y    equ 384              ; placar: celula n (N8) em (16*(n&15), 384 + 16*(n>>4)); 384..447
 ZPAT8     equ 56               ; padroes 56..59 (16x16): a figura ampliada
 NESTR     equ 48
 
@@ -69,6 +69,9 @@ O2Init8:
         call CmdFillB
         call WaitCmd
         call Celulas8
+        ld a,(fundoVP)
+        or a
+        call nz,Fundo8Init
         ; estrelas
         ld b,NESTR
         ld hl,estX
@@ -84,7 +87,13 @@ IE_E:   push bc
         call Rnd
         and 127
         ld c,a
-        call Rnd
+        ld a,(fundoVP)         ; com o fundo do Videopac+: so acima da Terra (6..101)
+        or a
+        jr z,IE_Y
+        ld a,c
+        and 63
+        ld c,a
+IE_Y:   call Rnd
         and 31
         add a,c
         add a,6
@@ -239,12 +248,8 @@ C8_N:   ld a,(o2c)
         ld (o2f),a
 C8_G:   xor a
         ld (odK),a             ; k
-C8_K:   ld a,(o2f)
-        ld c,a
-        add a,a
-        add a,c
-        ld hl,odK
-        add a,(hl)
+C8_K:   call N8
+        jp c,C8_PULA
         ld c,a                 ; n
         and 15
         add a,a
@@ -290,6 +295,7 @@ C8_K:   ld a,(o2f)
         ld a,14
         ld (mkRows),a
         call Degrade8
+C8_PULA:
         ld a,(odK)
         inc a
         ld (odK),a
@@ -421,6 +427,9 @@ MkSetWr8:
 ; leva a tabela virtual para a tela do modo 1
 O2Draw8:
         call Estrelas8
+        ld a,(fundoVP)
+        or a
+        call nz,FundoAnima8
         ; o canhao e uma copia so com margens pretas: nao precisa apagar antes
         xor a
         ld (drApaga),a
@@ -540,7 +549,14 @@ D8_CMP: ld a,(odX)
         jr z,D8_NEXT
 D8_CHG: ld a,b                 ; o canhao (com margens) se apaga sozinho
         cp 12-SLOT_PL
-        call nz,OD_Erase
+        jr nz,D8_ER
+        ld a,(fundoVP)         ; sobre o fundo do Videopac+: montado fora da tela
+        or a
+        jr z,D8_NE
+        call CanhaoFundo8
+        jr D8_GRAVA
+D8_ER:  call OD_Erase
+D8_NE:
         ld a,(drApaga)
         or a
         jp nz,D8_NEXT
@@ -561,7 +577,8 @@ D8_CHG: ld a,b                 ; o canhao (com margens) se apaga sozinho
         ld a,(odH)
         ld l,a
         ld (c_ny),hl
-        call CmdBlit
+        call CmdBlitC
+D8_GRAVA:
         ld a,(odX)
         ld (iy+0),a
         ld a,(odY)
@@ -678,6 +695,9 @@ SP8_ZO: ld a,217
         call VOut
         djnz SP8_ZO
 SP8_FIM:
+        ld a,(fundoVP)
+        or a
+        call nz,FundoSat8
         ld a,216
         call VOut
         ; cores: as que mudaram (planos 0..3 e a ampliada nos 4..7)
@@ -920,10 +940,7 @@ H8_L:   push bc
         cp 1
         jr z,H8_K
         inc c
-H8_K:   ld a,e
-        add a,a
-        add a,e
-        add a,c
+H8_K:   call N8R
         ld c,a
         ld hl,hudDr
         ld e,b
@@ -983,7 +1000,8 @@ H8_N:   pop hl
 
 ; ---------------------------------------------------------------------
 ; desliga o modo de jogo: esconde os sprites e volta ao SCREEN 5 dos menus
-O2Off:  ld a,(modo)
+O2Off:  call PalInit            ; o fundo do Videopac+ mexe nas cores 2..5
+        ld a,(modo)
         or a
         ld hl,SAT_ADDR
         jr z,OF_1
@@ -1010,4 +1028,40 @@ OF_1:   call SetWr
         ld a,2|0x80
         out (VDPCTRL),a
         ei
+        ret
+
+; celula do placar do modo 1/4 (so as combinacoes que o placar usa: libera
+; as linhas 448..511 para o fundo do modo 4). E = glifo, C = cor
+; (0 amarelo, 1 vermelho, 2 branco) -> A = n
+N8R:    ld a,c
+        or a
+        ld a,e
+        ret z                  ; amarelo: o glifo
+        ld a,c
+        cp 1
+        ld a,49
+        ret z                  ; vermelho: so a seta
+        ld a,e
+        add a,39               ; branco: os digitos
+        ret
+; o mesmo para a montagem (o2f = glifo, odK = cor); CY = combinacao que nao existe
+N8:     ld a,(o2f)
+        ld e,a
+        ld a,(odK)
+        ld c,a
+        or a
+        jr z,N8_OK
+        cp 1
+        jr nz,N8_B
+        ld a,e
+        cp 11                  ; a seta
+        jr nz,N8_NAO
+        jr N8_OK
+N8_B:   ld a,e
+        cp 10                  ; os digitos
+        jr nc,N8_NAO
+N8_OK:  call N8R
+        or a
+        ret
+N8_NAO: scf
         ret

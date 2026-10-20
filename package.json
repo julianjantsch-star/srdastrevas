@@ -6,7 +6,7 @@
   "scripts": {
     "gera": "node tools/gen_o2.cjs",
     "build": "node tools/gen_o2.cjs && ALVO=trevas node tools/build.mjs",
-    "test": "npm run build && node tools/testa-jogo.cjs && MODO=1 node tools/testa-jogo.cjs && node tools/testa-tempo.cjs"
+    "test": "npm run build && node tools/testa-jogo.cjs && MODO=1 node tools/testa-jogo.cjs && MODO=3 node tools/testa-jogo.cjs && MODO=4 node tools/testa-jogo.cjs && node tools/testa-tempo.cjs"
   },
   "keywords": [],
   "author": "",

@@ -62,7 +62,7 @@ ok(tipos.has(1), "misseis no nivel 1");
 if (nivelMax >= 2) ok(tipos.has(2), "minas a partir do nivel 2");
 if (mortes) ok(rd16("recorde") >= Math.min(pontosMax, 9999) || rd16("recorde") > recorde0, "o recorde ficou com os pontos: " + rd16("recorde"));
 // nome do recorde pelo teclado, a qualquer momento
-for (const k of ["J", "U", "L", "I", "A", "N"]) m.tap(k, 4, 4);   // 4 quadros: na abertura com fala ha quadros perdidos
+for (const k of ["J", "U", "L", "I", "A", "N"]) m.tap(k, 8, 4);   // 8 quadros (~130 ms, um toque humano): na abertura, a carga do fundo e a fala perdem quadros
 m.runFrames(4); foto("6-nome");
 const nome = String.fromCharCode(...m.mem.slice(sym.nomeRec, sym.nomeRec + 6));
 ok(nome === "JULIAN", "nome do recorde: " + nome);

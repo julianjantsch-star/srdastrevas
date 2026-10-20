@@ -95,3 +95,9 @@ Ainda sem medida direta (o robô não passou do nível 3): o nível 4 em diante,
 - https://odyssey2.info/library/manuals/us_timelord/Attack%20of%20the%20Timelord%20(USA).pdf
 - https://bojoga.com.br/artigos/retroplay/odyssey/senhor-das-trevas-philips-1983/
 - https://experienciaodyssey.com.br/senhordastrevas/
+
+## Modos 3 e 4 — fundos do Videopac+
+
+O fundo do G7400 foi tirado do *Terrahawks* / *Attack of the Timelord! plus* rodando no MAME (`videopacp`), pela moda dos quadros (`ref/fundo/terrahawks_g7400.png`).
+* **3** (SCREEN 5): o fundo fica numa cópia na página 3 (y=800); apagar é copiar de volta (HMMM), desenhar é LMMM com TIMP.
+* **4** (SCREEN 8): a faixa da Terra (linhas 120–183) com degradê fica na página 1 (y=448); Lua, asteriscos e nuvens são sprites (planos 8–17) animados a cada quadro; o canhão é composto fora da tela.

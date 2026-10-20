@@ -6,6 +6,8 @@ O **Senhor das Trevas fala**, como no Odyssey com o módulo *The Voice* (o mesmo
 
 * **0 — original** (SCREEN 5): igual ao Odyssey. Tudo foi medido no cartucho original rodando no MAME (ver `ref/MEDIDAS.md`).
 * **1 — moderno** (SCREEN 8): a mesma lógica e os mesmos sons, com fundo de estrelas, naves e canhão desenhados de novo, figuras em degradê e placar com brilho.
+* **3 — Videopac+** (SCREEN 5): o modo original com o fundo que o Videopac+ G7400 desenha no *Terrahawks* / *Attack of the Timelord! plus* (a Terra, a Lua com rosto, os asteriscos e as estrelas), tirado do cartucho rodando no MAME.
+* **4 — Videopac+ moderno** (SCREEN 8): o modo moderno com esse fundo redesenhado — a Terra iluminada com atmosfera — e o que se move: a Lua balança, os asteriscos giram e pulsam, nuvens passam sobre a Terra.
 
 ## Controles
 
@@ -46,5 +48,8 @@ O cartucho original manda **alofones** ao SP0256B-019 do The Voice (as 14 frases
 | `src/o2m.asm` | modo 1: leva a mesma cópia para o SCREEN 8 |
 | `src/o2dados.inc` | gerado: figuras, abertura, morte, estouro, sons |
 | `src/voz.inc`, `src/voz.bin` | gerados: os 45 alofones do SP0256 (trios de volume A+B+C, 7373 Hz) e as 14 frases |
+| `ref/fundo/terrahawks_g7400.png` | o fundo do Videopac+ (moda dos quadros do MAME, sem os objetos) |
+| `tools/gen_fundo.py` | gera `src/fundo.inc` e `src/fundo.bin` (os dois fundos e os sprites da Lua, dos asteriscos e das nuvens) |
+| `src/fundo.asm` | modos 3 e 4: carrega o fundo na VRAM, apaga copiando o fundo de volta, anima os sprites |
 | `tools/voz/` | `gen_voz.py` + `sim.cpp`: sintetiza as frases com o núcleo do SP0256 do MAME e recorta os alofones |
 | `ref/MEDIDAS.md` | tudo o que foi medido no original |

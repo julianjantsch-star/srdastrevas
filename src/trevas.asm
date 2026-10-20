@@ -711,22 +711,34 @@ ScreenSelect:
         ld b,C_BLACK
         call SetCols
         ld hl,TXT_OPT0
-        ld c,110
+        ld c,96
         call PrintCenter
         ld a,C_LCYAN
         ld b,C_BLACK
         call SetCols
         ld hl,TXT_OPT1
-        ld c,134
+        ld c,114
+        call PrintCenter
+        ld a,C_LYELLOW
+        ld b,C_BLACK
+        call SetCols
+        ld hl,TXT_OPT3V
+        ld c,132
+        call PrintCenter
+        ld a,C_LMAG
+        ld b,C_BLACK
+        call SetCols
+        ld hl,TXT_OPT4V
+        ld c,150
         call PrintCenter
         ld a,C_DGRAY
         ld b,C_BLACK
         call SetCols
         ld hl,TXT_OPT2
-        ld c,172
+        ld c,176
         call PrintCenter
         ld hl,TXT_OPT3
-        ld c,190
+        ld c,194
         call PrintCenter
 SS_W:
         call WaitFrame
@@ -739,11 +751,26 @@ SS_W:
         ld b,0x02              ; tecla 1
         call ChkEdge
         jr nz,SS_1
+        ld a,0
+        ld b,0x08              ; tecla 3: Videopac+ original
+        call ChkEdge
+        jr nz,SS_3
+        ld a,0
+        ld b,0x10              ; tecla 4: Videopac+ moderno
+        call ChkEdge
+        jr nz,SS_4
         jr SS_W
-SS_0:   xor a
+SS_0:   ld bc,0x0000           ; B = fundo do Videopac+, C = modo
         jr SS_GO
-SS_1:   ld a,1
-SS_GO:  ld (modo),a
+SS_1:   ld bc,0x0001
+        jr SS_GO
+SS_3:   ld bc,0x0100
+        jr SS_GO
+SS_4:   ld bc,0x0101
+SS_GO:  ld a,b
+        ld (fundoVP),a
+        ld a,c
+        ld (modo),a
         ld hl,SFX_SELECT
         ld a,4
         call SndPlay
@@ -1891,6 +1918,8 @@ TXT_ON2:     db "PARA LIGAR",0
 TXT_SELECT:  db "SELECT GAME",0
 TXT_OPT0:    db "0 ORIGINAL",0
 TXT_OPT1:    db "1 MODERNO",0
+TXT_OPT3V:   db "3 VIDEOPAC+",0
+TXT_OPT4V:   db "4 VIDEOPAC+ MOD",0
 TXT_OPT2:    db "SENHOR DAS",0
 TXT_OPT3:    db "TREVAS",0
 TXT_SETA:    db ">",0
@@ -1908,6 +1937,8 @@ TXT_TECLA:   db "APERTE ESPACO",0
 O2_ETAPAS equ 1+CF_N+ZF_N+HUD_NG
 #include "o2m.asm"
 #include "voz.inc"
+#include "fundo.inc"
+#include "fundo.asm"
 
 
 ; =====================================================================
@@ -1948,6 +1979,13 @@ keyEdge:   ds 12
 skRow:     ds 1
 
 modo:      ds 1
+fundoVP:   ds 1               ; 1 = com o fundo do Videopac+ (opcoes 3 e 4)
+fdBk:      ds 1               ; banco do fundo sendo lido
+fdT:       ds 1               ; modo 4: relogio da animacao do fundo
+fdNuv:     ds 2               ; modo 4: x das 2 nuvens
+fdLx:      ds 1
+fdNy:      ds 2
+c_dy2:     ds 2
 
 ; ---------------- RAM do jogo ----------------
 spI:       ds 1
