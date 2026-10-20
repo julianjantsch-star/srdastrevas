@@ -16,7 +16,8 @@ SPC8_ADDR equ 0xF800
 SPP8_ADDR equ 0xF000
 C8_Y      equ 256              ; celulas: figura f, cor c em (16c, 256 + 16f)
 NAVE8_Y   equ 256+16*CF_N      ; a nave nova, cor c em (16c, NAVE8_Y)
-CANH8_Y   equ NAVE8_Y+16       ; a piramide (24 x 14) em (0, CANH8_Y)
+CANH8_Y   equ NAVE8_Y+16       ; a piramide (24 x 14) em (CANH8_M, CANH8_Y)
+CANH8_M   equ 16               ; margem preta: a copia ja apaga onde ela estava
 HUD8_Y    equ 384              ; placar: n = 3g + k em (16*(n&15), 384 + 16*(n>>4))
 ZPAT8     equ 56               ; padroes 56..59 (16x16): a figura ampliada
 NESTR     equ 48
@@ -223,7 +224,7 @@ C8_N:   ld a,(o2c)
         ; a piramide, verde
         ld a,2
         ld (o2c),a
-        xor a
+        ld a,CANH8_M           ; com CANH8_M px de preto de cada lado
         ld (mkX),a
         ld hl,CANH8_Y
         ld (mkYv),hl
@@ -420,12 +421,7 @@ MkSetWr8:
 ; leva a tabela virtual para a tela do modo 1
 O2Draw8:
         call Estrelas8
-        ; duas passadas para o canhao: primeiro apaga as duas metades, depois
-        ; desenha (senao a que se move apaga a outra); as naves apagam e
-        ; desenham juntas, para nao piscar
-        ld a,1
-        ld (drApaga),a
-        call D8_LOOP
+        ; o canhao e uma copia so com margens pretas: nao precisa apagar antes
         xor a
         ld (drApaga),a
         call D8_LOOP
@@ -491,9 +487,17 @@ D8_S_P2:
         dec a
         ld (odY),a
         jr D8_CMP
-D8_PE:  ld hl,0
+D8_PE:  ; a piramide inteira numa copia so, com as margens pretas (que apagam
+        ; a posicao anterior: ela anda no maximo ~11 px por quadro)
+        ld a,(odX)
+        sub CANH8_M
+        ld (odX),a
+        ld a,24+2*CANH8_M
+        ld (odW),a
+        ld hl,0
         jr D8_PX
-D8_PD:  ld hl,12
+D8_PD:  ; a metade direita ja foi com a esquerda
+        jp D8_NEXT
 D8_PX:  ld (odSX),hl
         ld hl,CANH8_Y
         ld (odSY),hl
@@ -534,7 +538,9 @@ D8_CMP: ld a,(odX)
         ld a,(odK)
         cp (iy+2)
         jr z,D8_NEXT
-D8_CHG: call OD_Erase
+D8_CHG: ld a,b                 ; o canhao (com margens) se apaga sozinho
+        cp 12-SLOT_PL
+        call nz,OD_Erase
         ld a,(drApaga)
         or a
         jp nz,D8_NEXT
