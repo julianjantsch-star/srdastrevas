@@ -19,6 +19,7 @@ CEL_Y     equ 256              ; celulas dos caracteres (pagina 1)
 ZCEL_Y    equ 512              ; celulas ampliadas (paginas 2-3)
 VSLOTS    equ 13               ; 12 caracteres + 1 ampliada
 NO        equ 0xFF
+CANH_PAT  equ 60*4             ; padroes do canhao (16x16 60.. ; o fundo usa 32..42, a ampliada 56..59)
 
 ; ---------------------------------------------------------------------
 ; x do chip (A) -> X do MSX (A), par
@@ -96,6 +97,14 @@ O2Init:
         ld a,8|0x80
         out (VDPCTRL),a
         ei
+        ; o canhao (planos 4 e 5): verde
+        ld hl,SPC_ADDR+4*16
+        call SetWr
+        ld a,2
+        call O2Cor
+        ld b,32
+OI_CC5: call VOut
+        djnz OI_CC5
         ; tabela virtual vazia, nada desenhado
         call O2Clear
         ld hl,vDrawn
@@ -127,6 +136,58 @@ OI_P:   ld a,(hl)
         ld a,b
         or c
         jr nz,OI_P
+        ; o canhao: padroes 60 e 61 (as cores dos planos 4 e 5: O2Init)
+        ld hl,SPP_ADDR+CANH_PAT*8
+        call SetWr
+        ld hl,CANH_SPR
+        ld b,64
+        call VBloco
+        ret
+
+; B bytes de HL para a VRAM (ja preparada com SetWr)
+VBloco: ld a,(hl)
+        call VOut
+        inc hl
+        djnz VBloco
+        ret
+
+; o canhao como sprites: os slots 8 e 9 (as duas metades) nos padroes
+; CANH_PAT e CANH_PAT+4 (16x16); a cor das linhas e fixa (a VRAM ja preparada
+; no plano seguinte da lista)
+CanhSat:
+        ld ix,vCh+SLOT_PL*4
+        ld c,CANH_PAT
+        ld b,2
+CS_L:   ld a,(ix+2)
+        cp NO
+        jr z,CS_OFF
+        ld a,(ix+0)
+        sub O2_YOFF+1
+        cp 211
+        jr nc,CS_OFF
+        call VOut
+        ld a,(ix+1)
+        push bc
+        call O2X               ; (usa C)
+        pop bc
+        call VOut
+        ld a,c
+        call VOut
+        xor a
+        call VOut
+        jr CS_N
+CS_OFF: ld a,217
+        call VOut
+        xor a
+        call VOut
+        call VOut
+        call VOut
+CS_N:   ld de,4
+        add ix,de
+        ld a,c
+        add a,4
+        ld c,a
+        djnz CS_L
         ret
 
 ; A = figura de caractere: as 8 cores dela
@@ -415,14 +476,6 @@ OCL:    ld (hl),NO
 ; ---------------------------------------------------------------------
 ; leva a tabela virtual para a tela
 O2Draw:
-        ; duas passadas para o canhao: primeiro apaga as duas metades, depois
-        ; desenha (senao a que se move apaga a outra); as naves apagam e
-        ; desenham juntas, para nao piscar
-        ld a,1
-        ld (drApaga),a
-        call OD_LOOP
-        xor a
-        ld (drApaga),a
         call OD_LOOP
         jp O2Sprites
 OD_LOOP:
@@ -430,15 +483,11 @@ OD_LOOP:
         ld iy,vDrawn
         ld b,VSLOTS
 OD_L:   push bc
-        ld a,(drApaga)         ; 1a passada: so as duas metades do canhao
-        or a
-        jr z,OD_L_P2
-        ld a,b
+        ld a,b                 ; as duas metades do canhao sao sprites (O2Sprites)
         cp 13-SLOT_PL
-        jr z,OD_L_P2
+        jp z,OD_NEXT
         cp 13-SLOT_PL-1
-        jp nz,OD_NEXT
-OD_L_P2:
+        jp z,OD_NEXT
         ld a,b
         cp 1                   ; o ultimo e a figura ampliada
         jr z,OD_Z
@@ -530,9 +579,6 @@ OD_CMP: ; igual ao desenhado? (x, y, chave)
         cp (iy+2)
         jr z,OD_NEXT
 OD_CHG: call OD_Erase
-        ld a,(drApaga)
-        or a
-        jp nz,OD_NEXT
         ; copia a celula
         ld hl,(odSX)
         ld (c_sx),hl
@@ -645,6 +691,7 @@ OS_OFF: ld a,217
 OS_N:   ld de,4
         add ix,de
         djnz OS_L
+        call CanhSat           ; planos 4 e 5: o canhao
         ld a,216               ; fim da lista de sprites
         call VOut
         ; cores (so as que mudaram)

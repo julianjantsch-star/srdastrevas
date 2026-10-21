@@ -6,7 +6,7 @@
 ;   - caracteres em degrade (claro em cima, escuro embaixo) na rampa de 5
 ;     tons da cor do chip (RAMP8);
 ;   - a nave e um disco com cupula (NAVE8) e o canhao uma piramide cheia
-;     (CANHAO8): cada metade dela vai no slot de um dos caracteres;
+;     (CANHAO8) em 3 sprites (CanhSat8), na posicao do slot 8;
 ;   - as figuras normais sao sprites com a cor clara em cima e a escura
 ;     embaixo; as ampliadas, 4 sprites com o padrao gerado quando mudam;
 ;   - placar em degrade e caixa com brilho.
@@ -16,8 +16,6 @@ SPC8_ADDR equ 0xF800
 SPP8_ADDR equ 0xF000
 C8_Y      equ 256              ; celulas: figura f, cor c em (16c, 256 + 16f)
 NAVE8_Y   equ 256+16*CF_N      ; a nave nova, cor c em (16c, NAVE8_Y)
-CANH8_Y   equ NAVE8_Y+16       ; a piramide (24 x 14) em (CANH8_M, CANH8_Y)
-CANH8_M   equ 16               ; margem preta: a copia ja apaga onde ela estava
 HUD8_Y    equ 384              ; placar: celula n (N8) em (16*(n&15), 384 + 16*(n>>4)); 384..447
 ZPAT8     equ 56               ; padroes 56..59 (16x16): a figura ampliada
 NESTR     equ 48
@@ -154,6 +152,18 @@ C8_P:   ld a,(hl)
         ld a,b
         or c
         jr nz,C8_P
+        ; o canhao: padroes 60..62 (tubo, corpo esquerdo, corpo direito) e
+        ; as cores dos planos 8..10
+        ld hl,SPP8_ADDR+CANH_PAT*8
+        call SetWr
+        ld hl,CANH8_SPR
+        ld b,96
+        call VBloco
+        ld hl,SPC8_ADDR+8*16
+        call SetWr
+        ld hl,CANH8_COR
+        ld b,48
+        call VBloco
         ; caracteres em degrade: f = 0..CF_N-1, c = 0..7
         xor a
         ld (o2f),a
@@ -230,19 +240,6 @@ C8_N:   ld a,(o2c)
         ld (o2c),a
         cp 8
         jr c,C8_N
-        ; a piramide, verde
-        ld a,2
-        ld (o2c),a
-        ld a,CANH8_M           ; com CANH8_M px de preto de cada lado
-        ld (mkX),a
-        ld hl,CANH8_Y
-        ld (mkYv),hl
-        ld hl,CANHAO8
-        ld a,CANHAO8_W
-        ld (mkK),a
-        ld a,CANHAO8_H
-        ld (mkN),a
-        call Tons8
         ; placar: glifos em amarelo (3), vermelho (1) e branco (7)
         xor a
         ld (o2f),a
@@ -430,9 +427,6 @@ O2Draw8:
         ld a,(fundoVP)
         or a
         call nz,FundoAnima8
-        ; o canhao e uma copia so com margens pretas: nao precisa apagar antes
-        xor a
-        ld (drApaga),a
         call D8_LOOP
         jp Sprites8
 D8_LOOP:
@@ -440,15 +434,11 @@ D8_LOOP:
         ld iy,vDrawn
         ld b,12
 D8_SL:  push bc
-        ld a,(drApaga)         ; 1a passada: so as duas metades do canhao
-        or a
-        jr z,D8_S_P2
-        ld a,b
+        ld a,b                 ; as duas metades do canhao sao sprites (Sprites8)
         cp 12-SLOT_PL
-        jr z,D8_S_P2
+        jp z,D8_NEXT
         cp 12-SLOT_PL-1
-        jp nz,D8_NEXT
-D8_S_P2:
+        jp z,D8_NEXT
         ld a,(ix+2)
         cp NO
         jp z,D8_HIDE
@@ -470,12 +460,6 @@ D8_S_P2:
         ld (odK),a
         ld a,12
         ld (odW),a
-        ; qual celula: slots 8 e 9 (b = 4 e 3) sao as metades da piramide
-        ld a,b
-        cp 12-SLOT_PL
-        jr z,D8_PE
-        cp 12-SLOT_PL-1
-        jr z,D8_PD
         ld a,(ix+2)
         cp CF_NAVE
         jr nz,D8_CH
@@ -495,23 +479,6 @@ D8_S_P2:
         ld a,(odY)
         dec a
         ld (odY),a
-        jr D8_CMP
-D8_PE:  ; a piramide inteira numa copia so, com as margens pretas (que apagam
-        ; a posicao anterior: ela anda no maximo ~11 px por quadro)
-        ld a,(odX)
-        sub CANH8_M
-        ld (odX),a
-        ld a,24+2*CANH8_M
-        ld (odW),a
-        ld hl,0
-        jr D8_PX
-D8_PD:  ; a metade direita ja foi com a esquerda
-        jp D8_NEXT
-D8_PX:  ld (odSX),hl
-        ld hl,CANH8_Y
-        ld (odSY),hl
-        ld a,CANHAO8_H
-        ld (odH),a
         jr D8_CMP
 D8_CH:  ld a,c
         add a,a
@@ -547,19 +514,7 @@ D8_CMP: ld a,(odX)
         ld a,(odK)
         cp (iy+2)
         jr z,D8_NEXT
-D8_CHG: ld a,b                 ; o canhao (com margens) se apaga sozinho
-        cp 12-SLOT_PL
-        jr nz,D8_ER
-        ld a,(fundoVP)         ; sobre o fundo do Videopac+: montado fora da tela
-        or a
-        jr z,D8_NE
-        call CanhaoFundo8
-        jr D8_GRAVA
-D8_ER:  call OD_Erase
-D8_NE:
-        ld a,(drApaga)
-        or a
-        jp nz,D8_NEXT
+D8_CHG: call OD_Erase
         ld hl,(odSX)
         ld (c_sx),hl
         ld hl,(odSY)
@@ -695,6 +650,7 @@ SP8_ZO: ld a,217
         call VOut
         djnz SP8_ZO
 SP8_FIM:
+        call CanhSat8          ; planos 8..10
         ld a,(fundoVP)
         or a
         call nz,FundoSat8
@@ -734,6 +690,55 @@ SP8_ZC: push af
         ld a,b
         jr c,SP8_ZC
         ret
+
+; o canhao do modo 1: a piramide em 3 sprites (o tubo claro por cima do
+; corpo de 24 px) na posicao da metade esquerda (slot 8)
+CanhSat8:
+        ld ix,vCh+SLOT_PL*4
+        ld a,(ix+2)
+        cp NO
+        jr z,CS8_OFF
+        ld a,(ix+0)
+        sub O2_YOFF+1
+        cp 211
+        jr nc,CS8_OFF
+        ld d,a
+        ld a,(ix+1)
+        call O2X
+        ld e,a
+        ld c,CANH_PAT
+        call CS8_1
+        call CS8_1
+        ld a,e
+        add a,16
+        ld e,a
+CS8_1:  ld a,d
+        call VOut
+        ld a,e
+        call VOut
+        ld a,c
+        call VOut
+        xor a
+        call VOut
+        ld a,c
+        add a,4
+        ld c,a
+        ret
+CS8_OFF:
+        ld b,3
+CS8_O:  ld a,217
+        call VOut
+        xor a
+        call VOut
+        call VOut
+        call VOut
+        djnz CS8_O
+        ret
+; cores por linha (paleta fixa dos sprites no SCREEN 8): tubo, corpo, corpo
+CANH8_COR:
+        db 15,15,13,13,13,13,13,13,13,13,13,13,13,13,13,13
+        db 12,12,12,12,12,12,12,12,12,4,4,4,4,4,4,4
+        db 12,12,12,12,12,12,12,12,12,4,4,4,4,4,4,4
 
 ; A = cor do chip, C = plano: 10 linhas da cor clara e 6 da escura
 Cor8Plano:

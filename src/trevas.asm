@@ -1934,6 +1934,7 @@ TXT_TECLA:   db "APERTE ESPACO",0
 #include "font.inc"
 #include "o2.asm"
 #include "o2dados.inc"
+#include "canhao.inc"
 O2_ETAPAS equ 1+CF_N+ZF_N+HUD_NG
 #include "o2m.asm"
 #include "voz.inc"

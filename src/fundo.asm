@@ -115,7 +115,7 @@ Fundo5Init:
 ; a Lua, os asteriscos e 2 nuvens sao sprites (planos 8..17) que se movem
 FD8_VY  equ 448
 FD_P0   equ 32                 ; padroes 16x16 32.. (o jogo usa 0..24 e 56..59)
-FD_PL0  equ 8                  ; primeiro plano de sprite do fundo
+FD_PL0  equ 11                 ; primeiro plano de sprite do fundo (8..10: o canhao)
 FD_PAT_A1 equ FD_P0*4+24       ; padroes (8x8) dos asteriscos e da nuvem
 FD_PAT_A2 equ FD_P0*4+28
 FD_PAT_N  equ FD_P0*4+32
@@ -436,62 +436,3 @@ CmdBlitC:
         cp FD8_Y0+1
         jp c,CmdBlit
         jp CmdBlitT
-
-; modo 4: o canhao sobre a Terra sem piscar. Monta fora da tela (pagina 0,
-; linhas 216..: livres) o pedaco da Terra + o canhao (transparente) e copia
-; tudo de uma vez; as margens pretas da celula viram Terra e apagam onde
-; ele estava. odX/odY/odW/odH/odSX/odSY ja prontos (com as margens)
-FD_RASC equ 216
-CanhaoFundo8:
-        ; 1) a Terra embaixo: da faixa guardada
-        ld a,(odX)
-        ld l,a
-        ld h,0
-        ld (c_sx),hl
-        ld a,(odY)
-        ld l,a
-        ld de,FD8_VY-FD8_Y0
-        add hl,de
-        ld (c_sy),hl
-        ld hl,0
-        ld (c_dx),hl
-        ld hl,FD_RASC
-        ld (c_dy),hl
-        ld a,(odW)
-        ld l,a
-        ld h,0
-        ld (c_nx),hl
-        ld a,(odH)
-        ld l,a
-        ld (c_ny),hl
-        call CmdBlit
-        ; 2) o canhao por cima, com o preto transparente (so o miolo de 24 px:
-        ; a copia logica e lenta no SCREEN 8)
-        ld hl,(odSX)
-        ld de,CANH8_M
-        add hl,de
-        ld (c_sx),hl
-        ld hl,(odSY)
-        ld (c_sy),hl
-        ld hl,CANH8_M
-        ld (c_dx),hl
-        ld hl,24
-        ld (c_nx),hl
-        call CmdBlitT
-        ld a,(odW)
-        ld l,a
-        ld h,0
-        ld (c_nx),hl
-        ; 3) para a tela de uma vez
-        ld hl,0
-        ld (c_sx),hl
-        ld hl,FD_RASC
-        ld (c_sy),hl
-        ld a,(odX)
-        ld l,a
-        ld h,0
-        ld (c_dx),hl
-        ld a,(odY)
-        ld l,a
-        ld (c_dy),hl
-        jp CmdBlit

@@ -101,3 +101,7 @@ Ainda sem medida direta (o robô não passou do nível 3): o nível 4 em diante,
 O fundo do G7400 foi tirado do *Terrahawks* / *Attack of the Timelord! plus* rodando no MAME (`videopacp`), pela moda dos quadros (`ref/fundo/terrahawks_g7400.png`).
 * **3** (SCREEN 5): o fundo fica numa cópia na página 3 (y=800); apagar é copiar de volta (HMMM), desenhar é LMMM com TIMP.
 * **4** (SCREEN 8): a faixa da Terra (linhas 120–183) com degradê fica na página 1 (y=448); Lua, asteriscos e nuvens são sprites (planos 8–17) animados a cada quadro; o canhão é composto fora da tela.
+
+## Canhão em sprites de hardware (0.10)
+
+Os slots 8 e 9 da tabela virtual (as duas metades do canhão) não viram mais células copiadas: nos modos 0 e 3 são os planos 4 e 5 (padrões 60 e 61, de `CF_ESQ`/`CF_DIR`); nos modos 1 e 4 a pirâmide é feita de 3 sprites, os planos 8 a 10 (o tubo claro por cima do corpo de 24 px), e o fundo do Videopac+ passa para os planos 11 em diante. Os padrões estão em `src/canhao.inc`. Sem apagar e redesenhar o canhão, acabou a passada dupla e a montagem fora da tela do modo 4.
