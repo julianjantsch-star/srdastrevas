@@ -14,7 +14,7 @@ O **Senhor das Trevas fala**, como no Odyssey com o módulo *The Voice* (o mesmo
 Projeto **fan-made**, sem fins lucrativos e sem ligação com a Philips ou a Magnavox.
 
 * Jogo original: *Attack of the Timelord!* (*Senhor das Trevas!* no Odyssey brasileiro), de **Ed Averett**, Magnavox / Philips, 1982.
-* Port para MSX2+: **Julian Yant**.
+* Port para MSX2+: **Julian Jantsch**.
 
 Os créditos aparecem numa tela entre o botão ON e o SELECT GAME (passa com qualquer tecla ou sozinha em ~5 s).
 

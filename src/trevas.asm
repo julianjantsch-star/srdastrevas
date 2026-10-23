@@ -731,7 +731,7 @@ CRED_TAB:
         db C_LCYAN,88,"ED AVERETT",0
         db C_GRAY,106,"MAGNAVOX 1982",0
         db C_GRAY,140,"MSX2+ PORT BY",0
-        db C_LGREEN,158,"JULIAN YANT",0
+        db C_LGREEN,158,"JULIAN JANTSCH",0
         db 0
 
 ; =====================================================================
