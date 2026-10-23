@@ -138,6 +138,7 @@ INIT:
         ld (nomeOpen),a
 MAINLOOP:
         call ScreenOn           ; a experiencia comeca no botao ON
+        call ScreenCreditos
         call ScreenSelect       ; SELECT GAME: 0 = original, 1 = moderno
         call PlayGame
         jr MAINLOOP
@@ -686,6 +687,52 @@ ON_ARROW1: dw 122,44,12,32
            db 0x88             ; haste da seta
 ON_ARROW2: dw 114,68,28,10
            db 0x88             ; ponta da seta
+
+; =====================================================================
+;  CREDITOS: o jogo original e o port (passa com uma tecla ou em 5 s)
+; =====================================================================
+ScreenCreditos:
+        call ClearScreen
+        ld hl,CRED_TAB
+CR_L:   ld a,(hl)
+        or a
+        jr z,CR_W
+        inc hl
+        ld b,C_BLACK
+        push hl
+        call SetCols
+        pop hl
+        ld c,(hl)
+        inc hl
+        push hl
+        call PrintCenter
+        pop hl
+CR_Z:   ld a,(hl)              ; pula o texto
+        inc hl
+        or a
+        jr nz,CR_Z
+        jr CR_L
+CR_W:   ld b,0                 ; 256 quadros, ~5 s
+CR_Q:   push bc
+        call WaitFrame
+        call O2Passo
+        call ScanKeys
+        call AnyEdge
+        pop bc
+        ret nz
+        djnz CR_Q
+        ret
+; cor, y, texto
+CRED_TAB:
+        db C_LYELLOW,8,"FAN-MADE",0
+        db C_GRAY,34,"JOGO ORIGINAL",0
+        db C_WHITE,52,"ATTACK OF THE",0
+        db C_WHITE,70,"TIMELORD!",0
+        db C_LCYAN,88,"ED AVERETT",0
+        db C_GRAY,106,"MAGNAVOX 1982",0
+        db C_GRAY,140,"MSX2+ PORT BY",0
+        db C_LGREEN,158,"JULIAN YANT",0
+        db 0
 
 ; =====================================================================
 ;  TELA SELECT GAME

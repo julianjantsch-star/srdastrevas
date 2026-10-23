@@ -18,7 +18,7 @@ const ok = (c, msg) => { console.log((c ? "ok   " : "FALHA") + " " + msg); if (!
 const naves = () => { const v = []; for (let i = 0; i < 8; i++) { const b = sym.vCh + i * 4; if (m.mem[b + 2] === 0) v.push({ y: m.mem[b], x: m.mem[b + 1] }); } return v; };
 const armas = () => { const v = []; for (let i = 0; i < 3; i++) { const b = sym.wpTab + i * 8; if (m.mem[b]) v.push({ t: m.mem[b], y: m.mem[b + 1], x: m.mem[b + 2] }); } return v; };
 
-m.runFrames(150); m.tap("SPACE", 3, 30); m.runFrames(120);
+m.runFrames(150); m.tap("SPACE", 3, 30); m.tap("SPACE", 3, 30); m.runFrames(120);
 m.tap(MODO, 3, 2);
 m.runFrames(200); foto("1-raios");
 ok(rd("estado") === 0 && rd16("abF") > 20, "abertura tocando (quadro " + rd16("abF") + ")");

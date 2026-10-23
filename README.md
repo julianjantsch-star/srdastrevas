@@ -9,6 +9,15 @@ O **Senhor das Trevas fala**, como no Odyssey com o módulo *The Voice* (o mesmo
 * **3 — Videopac+** (SCREEN 5): o modo original com o fundo que o Videopac+ G7400 desenha no *Terrahawks* / *Attack of the Timelord! plus* (a Terra, a Lua com rosto, os asteriscos e as estrelas), tirado do cartucho rodando no MAME.
 * **4 — Videopac+ moderno** (SCREEN 8): o modo moderno com esse fundo redesenhado — a Terra iluminada com atmosfera — e o que se move: a Lua balança, os asteriscos giram e pulsam, nuvens passam sobre a Terra.
 
+## Créditos
+
+Projeto **fan-made**, sem fins lucrativos e sem ligação com a Philips ou a Magnavox.
+
+* Jogo original: *Attack of the Timelord!* (*Senhor das Trevas!* no Odyssey brasileiro), de **Ed Averett**, Magnavox / Philips, 1982.
+* Port para MSX2+: **Julian Yant**.
+
+Os créditos aparecem numa tela entre o botão ON e o SELECT GAME (passa com qualquer tecla ou sozinha em ~5 s).
+
 ## Controles
 
 | Tecla | Ação |
