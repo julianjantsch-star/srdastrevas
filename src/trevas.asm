@@ -136,6 +136,7 @@ INIT:
         ldir
         xor a
         ld (nomeOpen),a
+        ld (idioma),a          ; 0 = portugues, 1 = ingles (escolha na tela ON)
 MAINLOOP:
         call ScreenOn           ; a experiencia comeca no botao ON
         call ScreenCreditos
@@ -660,21 +661,95 @@ ScreenOn:
         ld b,152
         ld c,40
         call PrintAt
-        ld a,C_GRAY
-        ld b,C_BLACK
-        call SetCols
-        ld hl,TXT_ON1
-        ld c,150
-        call PrintCenter
-        ld hl,TXT_ON2
-        ld c,170
-        call PrintCenter
+        call OnTextos
 SO_W:
         call WaitFrame
         call O2Passo            ; monta as figuras do jogo enquanto espera a tecla
         call ScanKeys
+        ; P ou <- : portugues ; E ou -> : English ; outra tecla liga
+        ld a,4
+        ld b,0x20               ; P
+        call ChkEdge
+        jr nz,SO_PT
+        ld a,8
+        ld b,0x10               ; seta esquerda
+        call ChkEdge
+        jr nz,SO_PT
+        ld a,3
+        ld b,0x04               ; E
+        call ChkEdge
+        jr nz,SO_EN
+        ld a,8
+        ld b,0x80               ; seta direita
+        call ChkEdge
+        jr nz,SO_EN
         call AnyEdge
         jr z,SO_W
+        ret
+SO_PT:  xor a
+        jr SO_LG
+SO_EN:  ld a,1
+SO_LG:  ld (idioma),a
+        call OnTextos
+        jr SO_W
+
+; os textos da tela ON no idioma escolhido e a escolha "PT / EN"
+OnTextos:
+        ld hl,ON_LIMPA
+        call FillTab
+        ld a,C_GRAY
+        ld b,C_BLACK
+        call SetCols
+        ld hl,LT_ON1
+        call LTxt
+        ld c,150
+        call PrintCenter
+        ld hl,LT_ON2
+        call LTxt
+        ld c,170
+        call PrintCenter
+        ld a,(idioma)
+        or a
+        ld a,C_WHITE
+        jr z,OT_1
+        ld a,C_DGRAY
+OT_1:   ld b,C_BLACK
+        call SetCols
+        ld hl,TXT_PT
+        ld b,72
+        ld c,194
+        call PrintAt
+        ld a,C_DGRAY
+        ld b,C_BLACK
+        call SetCols
+        ld hl,TXT_BARRA
+        ld b,120
+        ld c,194
+        call PrintAt
+        ld a,(idioma)
+        or a
+        ld a,C_WHITE
+        jr nz,OT_2
+        ld a,C_DGRAY
+OT_2:   ld b,C_BLACK
+        call SetCols
+        ld hl,TXT_EN
+        ld b,152
+        ld c,194
+        jp PrintAt
+ON_LIMPA:  dw 0,150,256,60
+           db 0x00
+
+; HL -> dw texto em portugues, texto em ingles: HL = o do idioma
+LTxt:   ld a,(idioma)
+        or a
+        jr z,LT_0
+        inc hl
+        inc hl
+LT_0:   ld a,(hl)
+        inc hl
+        ld h,(hl)
+        ld l,a
         ret
 
 ON_BODY:   dw 96,86,64,26
@@ -693,7 +768,8 @@ ON_ARROW2: dw 114,68,28,10
 ; =====================================================================
 ScreenCreditos:
         call ClearScreen
-        ld hl,CRED_TAB
+        ld hl,LT_CRED
+        call LTxt
 CR_L:   ld a,(hl)
         or a
         jr z,CR_W
@@ -723,6 +799,17 @@ CR_Q:   push bc
         djnz CR_Q
         ret
 ; cor, y, texto
+LT_CRED: dw CRED_TAB,CRED_EN
+CRED_EN:
+        db C_LYELLOW,8,"FAN-MADE",0
+        db C_GRAY,34,"ORIGINAL GAME",0
+        db C_WHITE,52,"ATTACK OF THE",0
+        db C_WHITE,70,"TIMELORD!",0
+        db C_LCYAN,88,"ED AVERETT",0
+        db C_GRAY,106,"MAGNAVOX 1982",0
+        db C_GRAY,140,"MSX2+ PORT BY",0
+        db C_LGREEN,158,"JULIAN JANTSCH",0
+        db 0
 CRED_TAB:
         db C_LYELLOW,8,"FAN-MADE",0
         db C_GRAY,34,"JOGO ORIGINAL",0
@@ -763,7 +850,8 @@ ScreenSelect:
         ld a,C_LCYAN
         ld b,C_BLACK
         call SetCols
-        ld hl,TXT_OPT1
+        ld hl,LT_OPT1
+        call LTxt
         ld c,114
         call PrintCenter
         ld a,C_LYELLOW
@@ -781,10 +869,12 @@ ScreenSelect:
         ld a,C_DGRAY
         ld b,C_BLACK
         call SetCols
-        ld hl,TXT_OPT2
+        ld hl,LT_OPT2
+        call LTxt
         ld c,176
         call PrintCenter
-        ld hl,TXT_OPT3
+        ld hl,LT_OPT3
+        call LTxt
         ld c,194
         call PrintCenter
 SS_W:
@@ -1965,6 +2055,19 @@ TXT_ON2:     db "PARA LIGAR",0
 TXT_SELECT:  db "SELECT GAME",0
 TXT_OPT0:    db "0 ORIGINAL",0
 TXT_OPT1:    db "1 MODERNO",0
+TXE_OPT1:    db "1 MODERN",0
+TXE_OPT2:    db "ATTACK OF THE",0
+TXE_OPT3:    db "TIMELORD!",0
+TXE_ON1:     db "PRESS SPACE",0
+TXE_ON2:     db "TO TURN ON",0
+TXT_PT:      db "PT",0
+TXT_EN:      db "EN",0
+TXT_BARRA:   db "/",0
+LT_ON1:      dw TXT_ON1,TXE_ON1
+LT_ON2:      dw TXT_ON2,TXE_ON2
+LT_OPT1:     dw TXT_OPT1,TXE_OPT1
+LT_OPT2:     dw TXT_OPT2,TXE_OPT2
+LT_OPT3:     dw TXT_OPT3,TXE_OPT3
 TXT_OPT3V:   db "3 VIDEOPAC+",0
 TXT_OPT4V:   db "4 VIDEOPAC+ MOD",0
 TXT_OPT2:    db "SENHOR DAS",0
@@ -2089,6 +2192,7 @@ nomeRec:   ds 8
 nomeBuf:   ds 8
 nomeI:     ds 1
 nomeOpen:  ds 1
+idioma:    ds 1               ; 0 = portugues, 1 = English
 gapPos:    ds 1
 gapT:      ds 1
 hudDirty:  ds 1

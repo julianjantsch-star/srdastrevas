@@ -18,6 +18,10 @@ Projeto **fan-made**, sem fins lucrativos e sem ligação com a Philips ou a Mag
 
 Os créditos aparecem numa tela entre o botão ON e o SELECT GAME (passa com qualquer tecla ou sozinha em ~5 s).
 
+## Idioma
+
+Na tela ON, **P** (ou ←) escolhe português e **E** (ou →) inglês; os textos da tela ON, dos créditos e do SELECT GAME seguem a escolha (no inglês, o título vira *Attack of the Timelord!*). A fala é sempre em inglês, como no original.
+
 ## Controles
 
 | Tecla | Ação |
